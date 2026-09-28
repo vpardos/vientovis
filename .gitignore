@@ -1,0 +1,18 @@
+# Datos crudos descargados de fuentes públicas (ver data/SOURCES.md).
+# Se versionan para reproducibilidad: son pequeños (<9 MB en total).
+# Si en algún momento crecen o se agregan rasters/grids, de-comentar:
+# data/population/*.tif
+# data/**/*.tiff
+# data/**/*.zip
+
+# Entornos y temporales
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# Backup de la conversión de encoding del CSV del Censo (no versionar)
+*.csv.cp1252.bak
+*.bak
