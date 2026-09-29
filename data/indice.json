@@ -1,0 +1,96 @@
+{
+ "mock": false,
+ "nota": "Dataset final — fuentes en data/SOURCES.md",
+ "tormentas": [
+  {
+   "id": "katrina-2005",
+   "nombre": "Katrina",
+   "anio": 2005,
+   "cat_pico": 5,
+   "muertes_total": 1004,
+   "danos_total_usd": 33598443000,
+   "mock": false
+  },
+  {
+   "id": "helene-2024",
+   "nombre": "Helene",
+   "anio": 2024,
+   "cat_pico": 4,
+   "muertes_total": 184,
+   "danos_total_usd": 11333850170,
+   "mock": false
+  },
+  {
+   "id": "ian-2022",
+   "nombre": "Ian",
+   "anio": 2022,
+   "cat_pico": 5,
+   "muertes_total": 146,
+   "danos_total_usd": 16447080500,
+   "mock": false
+  },
+  {
+   "id": "sandy-2012",
+   "nombre": "Sandy",
+   "anio": 2012,
+   "cat_pico": 3,
+   "muertes_total": 136,
+   "danos_total_usd": 25250354920,
+   "mock": false
+  },
+  {
+   "id": "ida-2021",
+   "nombre": "Ida",
+   "anio": 2021,
+   "cat_pico": 4,
+   "muertes_total": 88,
+   "danos_total_usd": 13253659210,
+   "mock": false
+  },
+  {
+   "id": "irma-2017",
+   "nombre": "Irma",
+   "anio": 2017,
+   "cat_pico": 5,
+   "muertes_total": 79,
+   "danos_total_usd": 4653936400,
+   "mock": false
+  },
+  {
+   "id": "harvey-2017",
+   "nombre": "Harvey",
+   "anio": 2017,
+   "cat_pico": 4,
+   "muertes_total": 78,
+   "danos_total_usd": 51319256500,
+   "mock": false
+  },
+  {
+   "id": "ike-2008",
+   "nombre": "Ike",
+   "anio": 2008,
+   "cat_pico": 4,
+   "muertes_total": 60,
+   "danos_total_usd": 16990889090,
+   "mock": false
+  },
+  {
+   "id": "michael-2018",
+   "nombre": "Michael",
+   "anio": 2018,
+   "cat_pico": 5,
+   "muertes_total": 59,
+   "danos_total_usd": 15849412550,
+   "mock": false
+  },
+  {
+   "id": "maria-2017",
+   "nombre": "María",
+   "anio": 2017,
+   "cat_pico": 5,
+   "muertes_total": 20,
+   "danos_total_usd": 18263750000,
+   "mock": false
+  }
+ ]
+}
