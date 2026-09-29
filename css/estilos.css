@@ -497,7 +497,7 @@ b { font-weight: 600; }
 .tormenta {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 22px 78px;
+  padding: 16px 22px 34px;
   position: relative;
 }
 
@@ -888,16 +888,15 @@ b { font-weight: 600; }
 /* --- reproductor --- */
 
 .reproductor {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 1100;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 10px 22px 12px;
+  margin: 14px auto 0;
+  padding: 12px 16px;
   background: rgba(27, 26, 24, 0.92);
   backdrop-filter: blur(8px);
-  border-top: 1px solid var(--linea);
-  box-shadow: 0 -10px 30px rgba(12, 11, 10, 0.35);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  box-shadow: 0 10px 26px rgba(12, 11, 10, 0.35);
   display: grid;
   grid-template-columns: auto auto minmax(200px, 1fr) auto auto;
   grid-template-areas:
@@ -906,6 +905,16 @@ b { font-weight: 600; }
   align-items: center;
   gap: 8px 14px;
 }
+
+/* play y sonido: encabezan la barra superior y pesan más (padding y tamaño) */
+.reproductor #btn-play,
+.reproductor #btn-audio {
+  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 9px;
+}
+
+.reproductor #btn-play { min-width: 148px; }
 
 .velocidades {
   display: flex;
@@ -1185,6 +1194,8 @@ input[type='range'].volumen::-moz-range-thumb {
 
 .pie-credito { margin: 0; font: 400 10px var(--mono); color: var(--texto-2); white-space: nowrap; }
 
+.pie-integrantes { white-space: normal; }
+
 /* ------------ Leaflet: estilos propios (tema oscuro) ------------ */
 
 .leaflet-container {
@@ -1260,6 +1271,9 @@ input[type='range'].volumen::-moz-range-thumb {
   .tormenta { padding-left: 14px; padding-right: 14px; }
   .reproductor { padding-left: 12px; padding-right: 12px; }
   .btn-primario { min-width: 90px; }
+  .reproductor #btn-play,
+  .reproductor #btn-audio { font-size: 13px; padding: 11px 16px; }
+  .reproductor #btn-play { min-width: 118px; }
   .audio-grupo { padding-left: 8px; }
   .reloj { min-width: 0; font-size: 11px; }
 }

@@ -269,6 +269,23 @@ const App = {
       '<span class="ts-item"><b>' + tramosIR.length + '</b> tramo' + (tramosIR.length === 1 ? '' : 's') + ' IR</span>' +
       '</div>' +
       '</div>' +
+      /* reproductor: barra superior de la vista tormenta (por encima del mapa y los paneles) */
+      '<div class="reproductor" id="reproductor">' +
+      '<button type="button" id="btn-play" class="btn btn-primario" aria-label="Reproducir la tormenta">Reproducir</button>' +
+      '<div class="velocidades" role="group" aria-label="Velocidad de reproducción">' +
+      '<button type="button" class="vel" data-vel="0.25" aria-pressed="false">0,25×</button>' +
+      '<button type="button" class="vel activo" data-vel="0.5" aria-pressed="true">0,5×</button>' +
+      '</div>' +
+      '<input type="range" id="scrubber" class="scrubber" min="0" max="' + (puntos.length - 1) + '" step="1" value="0" aria-label="Línea de tiempo de la tormenta" aria-valuemin="0" aria-valuemax="' + (puntos.length - 1) + '">' +
+      '<span class="reloj" id="reloj">' + Datos.fmtReloj(puntos[0].d) + '</span>' +
+      '<div class="audio-grupo">' +
+      '<button type="button" id="btn-audio" class="btn">Activar sonido</button>' +
+      '<div class="audio-extra oculto" id="audio-extra">' +
+      '<button type="button" id="btn-mudo" class="btn" aria-pressed="false">Silenciar</button>' +
+      '<input type="range" id="volumen" class="volumen" min="0" max="1" step="0.01" value="0.7" aria-label="Volumen del sonido">' +
+      '</div></div>' +
+      '<p class="rep-valores" id="rep-valores" aria-live="off"></p>' +
+      '</div>' +
       '<div class="tormenta-cuerpo">' +
       '<div class="tormenta-mapa" id="tor-mapa">' +
       '<div class="contador-impacto" id="contador-impacto" role="group" aria-label="Acumulados del punto activo">' +
@@ -287,23 +304,7 @@ const App = {
       '</div>' +
       '<div class="tormenta-paneles" id="tor-paneles"></div>' +
       '</div>' +
-      '</section>' +
-      '<div class="reproductor" id="reproductor">' +
-      '<button type="button" id="btn-play" class="btn btn-primario" aria-label="Reproducir la tormenta">Reproducir</button>' +
-      '<div class="velocidades" role="group" aria-label="Velocidad de reproducción">' +
-      '<button type="button" class="vel" data-vel="0.25" aria-pressed="false">0,25×</button>' +
-      '<button type="button" class="vel activo" data-vel="0.5" aria-pressed="true">0,5×</button>' +
-      '</div>' +
-      '<input type="range" id="scrubber" class="scrubber" min="0" max="' + (puntos.length - 1) + '" step="1" value="0" aria-label="Línea de tiempo de la tormenta" aria-valuemin="0" aria-valuemax="' + (puntos.length - 1) + '">' +
-      '<span class="reloj" id="reloj">' + Datos.fmtReloj(puntos[0].d) + '</span>' +
-      '<div class="audio-grupo">' +
-      '<button type="button" id="btn-audio" class="btn">Activar sonido</button>' +
-      '<div class="audio-extra oculto" id="audio-extra">' +
-      '<button type="button" id="btn-mudo" class="btn" aria-pressed="false">Silenciar</button>' +
-      '<input type="range" id="volumen" class="volumen" min="0" max="1" step="0.01" value="0.7" aria-label="Volumen del sonido">' +
-      '</div></div>' +
-      '<p class="rep-valores" id="rep-valores" aria-live="off"></p>' +
-      '</div>';
+      '</section>';
 
     document.title = 'Vientovis — ' + meta.nombre + ' (' + meta.anio + ')';
 
