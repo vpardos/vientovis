@@ -16,3 +16,7 @@ __pycache__/
 # Backup de la conversión de encoding del CSV del Censo (no versionar)
 *.csv.cp1252.bak
 *.bak
+
+# archivos locales no rastreados
+prompt.md
+Pasted image.png
