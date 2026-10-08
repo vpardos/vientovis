@@ -21,10 +21,11 @@ const MapaTormenta = {
   ATTR_SATELITE: 'Teselas &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, Maxar, Earthstar Geographics',
 
   /* Colores del «carril» (contornos bajo el trazo coloreado por categoría):
-   * oscuro exterior + acero pálido interior → la paleta viridis completa
-   * (incluida la cat 5 amarilla) se lee sobre la textura del satélite. */
+   * oscuro exterior (da contraste sobre satélite a toda la paleta semáforo)
+   * + interior casi blanco (delinea cada trazo verde→rojo; el antiguo acero
+   * pálido #7fa8b5 se fundía con el verde cat0 y el naranja cat3). */
   CARRIL_OSCURO: '#061018',
-  CARRIL_CLARO: '#7fa8b5',
+  CARRIL_CLARO: '#eef5f9',
   CLARO_ETIQUETA: '#eef5f9',
 
   crear(contenedor, opciones) {
@@ -53,10 +54,10 @@ const MapaTormenta = {
     const saltarSinAnim = () => reduceMov();
 
     /* --- trayectoria: un segmento por par de puntos, color por categoría.
-     * Debajo van DOS contornos continuos y uniformes (oscuro exterior + pálido
-     * interior): forman un «carril legible» alrededor de todo el trazado, dan
-     * contraste a los tramos oscuros de la paleta viridis sobre la textura del
-     * satélite y evitan el efecto «oruga» de contornos por segmento. --- */
+     * Debajo van DOS contornos continuos y uniformes (oscuro exterior + casi
+     * blanco interior): forman un «carril legible» alrededor de todo el trazado
+     * y dan contraste a la paleta semáforo (verde→rojo) sobre la textura del
+     * satélite sin el efecto «oruga» de contornos por segmento. --- */
     const maxPeso = 3 + 4 * 0.8; // peso del tramo de cat 5
     const coordsTrazo = puntos.map(p => [p.lat, p.lon]);
     L.polyline(coordsTrazo, {

@@ -1,7 +1,8 @@
 /* estilos.css — vientovis (tema «tormenta en gris»)
  * Sala de situación: gris oscuro profundo con brillos verde agua y grano
  * sutil; el blanco se reserva para los datos. Canales de datos disciplinados:
- *  - categoría Saffir–Simpson → única paleta viridis (rojo/carmesí jamás)
+ *  - categoría Saffir–Simpson → única paleta semáforo verde→rojo (el carmesí
+ *    de muertes jamás se usa como categoría)
  *  - muertes → carmesí propio · daños → ámbar propio
  *  - comparar A/B → dos neutros (bruma / arena) entre sí distinguibles
  * El acento verde agua (#2EA38B) es CHROME (botones, foco, estados activos),
@@ -39,13 +40,13 @@
   --ambar: #e8a845;        /* daños */
   --ambar-2: #f5c56b;
 
-  /* paleta de categoría (viridis) — SOLO categoría */
-  --cat0: #46327e;
-  --cat1: #365c8d;
-  --cat2: #277f8e;
-  --cat3: #1fa187;
-  --cat4: #5ec962;
-  --cat5: #fde725;
+  /* paleta de categoría (semáforo verde→rojo) — SOLO categoría */
+  --cat0: #29c47f;
+  --cat1: #8fc72f;
+  --cat2: #d8c21c;
+  --cat3: #f0952e;
+  --cat4: #ef5f2d;
+  --cat5: #e63946;
 
   --radio: 12px;
   --sombra: 0 16px 40px rgba(12, 11, 10, 0.55);
@@ -272,12 +273,14 @@ b { font-weight: 600; }
 
 .chip-neutro { background: var(--panel-3); color: var(--texto); }
 
-.chip-cat-0 { background: var(--cat0); color: #f0efec; }
-.chip-cat-1 { background: var(--cat1); color: #f0efec; }
-.chip-cat-2 { background: var(--cat2); color: #f0efec; }
-.chip-cat-3 { background: var(--cat3); color: #101321; }
-.chip-cat-4 { background: var(--cat4); color: #101321; }
-.chip-cat-5 { background: var(--cat5); color: #101321; }
+/* Fondos claros/medios en los 6 pasos: texto oscuro #0b0e14 para AA.
+ * (cat5 #e63946: blanco daría 3.6:1; oscuro da 4.6:1.) */
+.chip-cat-0 { background: var(--cat0); color: #0b0e14; }
+.chip-cat-1 { background: var(--cat1); color: #0b0e14; }
+.chip-cat-2 { background: var(--cat2); color: #0b0e14; }
+.chip-cat-3 { background: var(--cat3); color: #0b0e14; }
+.chip-cat-4 { background: var(--cat4); color: #0b0e14; }
+.chip-cat-5 { background: var(--cat5); color: #0b0e14; }
 
 .chips-categorias {
   display: flex;
@@ -329,10 +332,8 @@ b { font-weight: 600; }
 
 .cinta-seg {
   min-width: 3px;
-  opacity: 0.45;
+  opacity: 1; /* sin atenuación: color pleno de categoría también en segmentos chicos */
 }
-
-.cinta-seg.cinta-top { opacity: 1; }
 
 .cinta-caption {
   margin: 8px 0 0;

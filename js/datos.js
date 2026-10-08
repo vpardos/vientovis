@@ -5,8 +5,10 @@
 
 const Datos = {
 
-  /* Paleta de categoría Saffir–Simpson (derivada de viridis), fija. */
-  CAT_COLORES: ['#46327e', '#365c8d', '#277f8e', '#1fa187', '#5ec962', '#fde725'],
+  /* Paleta de categoría Saffir–Simpson (semáforo verde→rojo), fija.
+   * Los 6 pasos difieren en luminosidad/saturación además del matiz para
+   * seguir siendo distinguibles en deuteranopia. Índice = cat_ss 0–5. */
+  CAT_COLORES: ['#29c47f', '#8fc72f', '#d8c21c', '#f0952e', '#ef5f2d', '#e63946'],
 
   MESES: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
 
