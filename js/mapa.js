@@ -4,7 +4,8 @@
  *                 reales (Esri World Imagery, sin API key): trayectoria con
  *                 «carril» oscuro + pálido para contraste sobre satélite,
  *                 tocatierras con etiqueta, marcador = img/hurricane.png
- *                 escalado por viento (kt) y con halo por categoría, y la API
+ *                 escalado por viento (kt) con tamaño aparente CONSISTENTE
+ *                 con el zoom del mapa y con halo por categoría, y la API
  *                 de coreografía de zoom (C4): zoomInicio / seguir /
  *                 panorama, usados SOLO durante el playback.
  *  - crearMini()→ mini-mapa Leaflet NO interactivo para cada ficha de la
@@ -120,11 +121,28 @@ const MapaTormenta = {
     );
 
     /* --- punto actual: img/hurricane.png, escalado LINEALMENTE por VIENTO
-     * (30 kt → 84 px, 160 kt → 276 px; redondeado, ancla centrada) + halo de
-     * intensidad coloreado POR CATEGORÍA (el canal de dato pasa por el halo) --- */
-    const tamIcono = (kt) => {
+     * (30 kt → 84 px, 160 kt → 276 px en el encuadre base; redondeado, ancla
+     * centrada) + halo de intensidad coloreado POR CATEGORÍA (el canal de dato
+     * pasa por el halo).
+     * Tamaño CONSISTENTE CON EL ZOOM: los px por grado del mapa escalan ~2^zoom,
+     * así que el ícono = tamañoBase(viento) · 2^(zoom − zoomBase), con zoomBase
+     * el encuadre de REFERENCIA (el del fitBounds inicial/reencuadrar): en el
+     * zoom por defecto se ve igual que antes, encoge al alejar y crece al
+     * acercar (sin tope superior), conservando su tamaño aparente sobre el
+     * terreno. Redondeo a múltiplos de 2 px (acota la caché de L.icon) y suelo
+     * de 12 px para que nunca desaparezca al alejarse mucho. --- */
+    let zoomBase = 4; // zoom del encuadre de REFERENCIA del ícono (lo fija encajar())
+    const tamIconoBase = (kt) => {
       const v = +kt;
-      return Math.round(84 + ((Number.isFinite(v) ? v : 30) - 30) * (192 / 130));
+      return 84 + ((Number.isFinite(v) ? v : 30) - 30) * (192 / 130);
+    };
+    const tamIcono = (kt, zoom) => {
+      const z = Number.isFinite(zoom) ? zoom : mapa.getZoom();
+      const zr = Number.isFinite(zoomBase) ? zoomBase : z;
+      // Solo encoge al alejarse del zoom de referencia; al acercar no crece
+      // (mantiene el tamaño aprobado en el plano de seguimiento).
+      const f = (Number.isFinite(z) && Number.isFinite(zr)) ? Math.min(1, Math.pow(2, z - zr)) : 1;
+      return Math.max(12, Math.round((tamIconoBase(kt) * f) / 2) * 2);
     };
     const cacheIconos = Object.create(null); // una L.icon por tamaño (px) ya usado
     const iconoHuracan = (px) => {
@@ -148,12 +166,16 @@ const MapaTormenta = {
       keyboard: false,
       zIndexOffset: 400
     }).addTo(mapa);
-    let tamIconoActual = tamIcono(puntos[0].viento_kt);
+    let tamIconoActual = tamIcono(puntos[0].viento_kt); // px actuales (mapa sin vista aún: base)
+    let vientoActivo = +puntos[0].viento_kt; // último viento aplicado: el zoom reusa esto
 
     /* Aplica posición + viento al marcador y su halo: misma vía para el snap
-     * discreto y para el deslizamiento interpolado del playback. */
-    const aplicarPunto = (lat, lon, t, p) => {
-      if (t !== tamIconoActual) { // reescalado solo si cambia el tamaño (viento, C3)
+     * discreto y para el deslizamiento interpolado del playback. El tamaño en
+     * pantalla lo deriva tamIcono() del viento y del zoom actual del mapa. */
+    const aplicarPunto = (lat, lon, viento, p) => {
+      vientoActivo = +viento;
+      const t = tamIcono(vientoActivo);
+      if (t !== tamIconoActual) { // reescalado solo si cambia el tamaño (viento o zoom)
         puntoActual.setIcon(iconoHuracan(t));
         tamIconoActual = t;
       }
@@ -185,14 +207,32 @@ const MapaTormenta = {
     const anilloHover = L.circleMarker([puntos[0].lat, puntos[0].lon], {
       radius: 12, fill: false, stroke: false, interactive: false
     }).addTo(mapa);
+    let indiceHover = -1; // punto en vista previa (anillo visible), o -1
+
+    /* Reaplica el tamaño al zoom ACTUAL: lo llama cada zoomend y encajar().
+     * El viento no cambia al hacer zoom, así que reusa el último conocido
+     * (vientoActivo / indiceHover; por defecto, el punto inicial). */
+    const refrescarTamanoZoom = () => {
+      const z = mapa.getZoom();
+      const t = tamIcono(vientoActivo, z);
+      if (t !== tamIconoActual) { // setIcon solo si el px redondeado cambió
+        puntoActual.setIcon(iconoHuracan(t));
+        tamIconoActual = t;
+      }
+      haloActual.setRadius(t / 2 + 3); // halo: mismo factor que el ícono
+      if (indiceHover >= 0) {
+        const h = puntos[indiceHover];
+        if (h) anilloHover.setRadius(tamIcono(h.viento_kt, z) / 2 + 6); // anillo hover ídem
+      }
+    };
 
     /* Encuadre AJUSTADO: el trayecto entra y sale por los bordes del mapa.
      * Sin tope de zoom. Nota: el fit real corre en encajar(), tras fijar la
-     * altura final (la app llama reencuadrar()). zoomBase queda registrado
-     * aquí para la coreografía de zoom (C4). */
+     * altura final (la app llama reencuadrar()). zoomBase (declarado arriba:
+     * referencia del tamaño del ícono y de la coreografía C4) queda
+     * registrado aquí. */
     const encuadre = L.latLngBounds(puntos.map(p => [p.lat, p.lon]));
     const PAD = [12, 12];
-    let zoomBase = 4;
     let zSeguimiento = null; // nivel cercano constante del acompañamiento (C4)
     const encajar = () => {
       const anterior = mapa.options.zoomSnap;
@@ -200,8 +240,13 @@ const MapaTormenta = {
       mapa.fitBounds(encuadre, { padding: PAD, animate: false });
       zoomBase = mapa.getZoom();
       mapa.options.zoomSnap = anterior; // grid normal para la interacción
+      refrescarTamanoZoom(); // el encuadre fija el tamaño base de referencia
     };
     encajar();
+
+    /* El zoom de usuario (control/doble clic, grid zoomSnap 0.5) reescala el
+     * ícono: conserva su tamaño aparente sobre el terreno. */
+    mapa.on('zoomend', refrescarTamanoZoom);
 
     return {
       mapa: mapa,
@@ -212,7 +257,7 @@ const MapaTormenta = {
       setPuntoActivo(i) {
         const p = puntos[i];
         if (!p) return;
-        aplicarPunto(p.lat, p.lon, tamIcono(p.viento_kt), p);
+        aplicarPunto(p.lat, p.lon, p.viento_kt, p);
       },
 
       /* SOLO playback automático: desliza el marcador a la posición y viento
@@ -225,15 +270,16 @@ const MapaTormenta = {
         const v = saltarSinAnim()
           ? { lat: p.lat, lon: p.lon, viento: +p.viento_kt }
           : interp(i, frac);
-        aplicarPunto(v.lat, v.lon, tamIcono(v.viento), p);
+        aplicarPunto(v.lat, v.lon, v.viento, p);
       },
 
       /* Anillo punteado del punto en vista previa (hover), o null para quitarlo. */
       setHover(i) {
         const p = puntos[i];
+        indiceHover = p ? i : -1;
         if (!p) { anilloHover.setStyle({ stroke: false }); return; }
         anilloHover.setLatLng([p.lat, p.lon]);
-        anilloHover.setRadius(tamIcono(p.viento_kt) / 2 + 6);
+        anilloHover.setRadius(tamIcono(p.viento_kt) / 2 + 6); // viento × zoom
         anilloHover.setStyle({
           stroke: true, color: '#ffffff', opacity: 0.9,
           dashArray: '3 4', weight: 1.6, fill: false
