@@ -259,7 +259,7 @@ const App = {
     main.innerHTML =
       '<section class="tormenta">' +
       '<div class="tormenta-cabecera">' +
-      '<a class="tormenta-volver" href="#galeria">← Galería</a>' +
+      '<a class="tormenta-volver" href="#galeria">← Huracanes</a>' +
       '<h1 class="tormenta-titulo">' + meta.nombre + ' <span class="tormenta-anio">' + meta.anio + '</span></h1>' +
       '<span class="chip chip-cat-' + meta.cat_pico + '">Cat ' + meta.cat_pico + '</span>' +
       '<div class="tormenta-stats mono">' +
