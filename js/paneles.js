@@ -2,24 +2,29 @@
 /* paneles.js — global `Paneles`.
  *  - crearPanelTormenta() → los 3 paneles apilados (viento/presión, muertes,
  *    daños) con eje temporal compartido y crosshair sincronizado.
- *  - crearComparar()      → los 2 paneles de la vista comparación, alineados
- *    por horas relativas al PRIMER tocatierra de cada tormenta.
  *
  * Muertes y daños van desde 0 (sin truncar); la única escala no directa es la
  * del eje derecho de presión (invertido, práctica meteorológica), declarada en
  * la leyenda del panel 1. Infrarrojos (IR) y tocatierras se repiten en los 3
- * paneles para leer la alineación temporal sin interacción. */
+ * paneles para leer la alineación temporal sin interacción; bajo el eje X del
+ * panel INFERIOR (daños) van los timestamps de los tocatierras que tienen
+ * nota emparejada en data/notas-tocatierras.json. */
 
 const Paneles = {
 
-  /* Tinta (el trazo de viento) en claro sobre el panel nocturno. */
+  /* Tinta (el trazo de viento) en claro sobre el panel nocturno.
+   * El carmesí de muertes es más rosado que la rampa de rojos de categoría
+   * (V2): el matiz los aparta en la misma vista (panel vs. mapa/chips). */
   TINTA: '#edf2fa',
   GRIS: '#a3b4d6',
-  CARMESI: '#e8506a',   // muertes (canal propio; nunca paleta de categoría)
+  CARMESI: '#ea4f7e',   // muertes (canal propio; nunca paleta de categoría)
   AMBAR: '#e8a845',     // daños (canal propio; nunca paleta de categoría)
   LINEA_EJE: '#3d4f76',
-  PIZARRA: '#a9c3dc',   // neutro A en comparación (bruma; nunca paleta de categoría)
-  SIENA: '#dcb287',     // neutro B en comparación (arena; nunca paleta de categoría)
+
+  /* renglón extra bajo el eje X del panel inferior (etiquetas de tocatierra) */
+  ALTO_ETQ_TOCA: 54,
+  /* emparejado nota↔tocatierra: mismo criterio que el mapa (±2 h, la más cercana) */
+  NOTA_UMBRAL_MS: 2 * 3600 * 1000,
 
   M: { sup: 26, der: 58, izq: 46, inf: 26 },
 
@@ -37,6 +42,9 @@ const Paneles = {
     const presionMin = d3.min(puntos, p => p.presion_mb);
     const presionBaja = Math.min(950, presionMin - 6);
     const vientoMax = d3.max(puntos, p => p.viento_kt) || 1;
+    /* notas de tocatierra de esta tormenta (opción `notas`, cruda): alimentan
+     * los timestamps bajo el eje X del panel inferior */
+    const notas = Paneles._normalizarNotasToca(opciones.notas);
 
     let iActivo = 0;
     let iHover = null;     // vista previa por hover (tiene prioridad)
@@ -62,8 +70,8 @@ const Paneles = {
       marco.html('');
       paneles = [
         Paneles._panelVientoPresion(marco, { puntos: puntos, x: x, ancho: ancho, vientoMax: vientoMax, presionBaja: presionBaja, leyendaP1: leyendaP1, sub: Datos.fmtRango(puntos) }),
-        Paneles._panelAcumulado(marco, { puntos: puntos, x: x, ancho: ancho, campo: 'muertes_acum', titulo: 'Muertes acumuladas', fmtTick: v => Datos.fmtEntero(v), color: Paneles.CARMESI, colorArea: 'rgba(232,80,106,0.13)', ultimo: false }),
-        Paneles._panelAcumulado(marco, { puntos: puntos, x: x, ancho: ancho, campo: 'danos_acum_usd', titulo: 'Daños acumulados', fmtTick: v => Datos.fmtUSDCorto(v), color: Paneles.AMBAR, colorArea: 'rgba(232,168,69,0.12)', ultimo: true })
+        Paneles._panelAcumulado(marco, { puntos: puntos, x: x, ancho: ancho, campo: 'muertes_acum', titulo: 'Muertes acumuladas', fmtTick: v => Datos.fmtEntero(v), color: Paneles.CARMESI, colorArea: 'rgba(234,79,126,0.13)', ultimo: false }),
+        Paneles._panelAcumulado(marco, { puntos: puntos, x: x, ancho: ancho, campo: 'danos_acum_usd', titulo: 'Daños acumulados', fmtTick: v => Datos.fmtUSDCorto(v), color: Paneles.AMBAR, colorArea: 'rgba(232,168,69,0.12)', ultimo: true, notas: notas })
       ];
     }
 
@@ -133,6 +141,110 @@ const Paneles = {
       g.append('path')
         .attr('d', 'M' + (xt - 4.5) + ' 0 L' + (xt + 4.5) + ' 0 L' + xt + ' 7 Z')
         .attr('fill', '#d5e1ef');
+    });
+  },
+
+  /* ---------- timestamps de tocatierra (bajo el eje X del panel inferior) ---------- */
+
+  /* Normaliza las notas de data/notas-tocatierras.json (mismo formato de
+   * entrada que usa el mapa): {tMs, lugar, nota, cat}. */
+  _normalizarNotasToca(lista) {
+    return (Array.isArray(lista) ? lista : [])
+      .map(n => ({
+        tMs: +new Date(n.t),
+        lugar: String(n.lugar == null ? '' : n.lugar),
+        nota: String(n.nota == null ? '' : n.nota),
+        cat: n.cat
+      }))
+      .filter(n => Number.isFinite(n.tMs));
+  },
+
+  /* Emparejado 1:1 nota → tocatierra: el tocatierra más cercano en tiempo
+   * (±2 h, mismo umbral que el mapa), sin repetir una nota en dos tocatierras
+   * contiguos. Devuelve [{p, nota, x}] ordenado por tiempo. */
+  _tocasConNota(puntos, notas, x) {
+    const etiquetas = [];
+    (notas || []).forEach(nota => {
+      let mejor = null;
+      let mejorDist = Infinity;
+      puntos.forEach(p => {
+        if (!p.tocatierra) return;
+        const dist = Math.abs(+p.d - nota.tMs);
+        if (dist < mejorDist) { mejorDist = dist; mejor = p; }
+      });
+      if (mejor && mejorDist <= Paneles.NOTA_UMBRAL_MS) etiquetas.push({ p: mejor, nota: nota, x: x(mejor.d) });
+    });
+    etiquetas.sort((a, b) => +a.p.d - +b.p.d);
+    return etiquetas;
+  },
+
+  /* Texto compacto de la etiqueta: «29 ago · 11:10 — Buras» (lugar truncado a
+   * ~18 caracteres con ellipsis). */
+  _fmtEtqToca(p, nota) {
+    const hh = String(p.d.getUTCHours()).padStart(2, '0');
+    const mm = String(p.d.getUTCMinutes()).padStart(2, '0');
+    let lugar = nota.lugar;
+    if (lugar.length > 18) lugar = lugar.slice(0, 17).replace(/\s+$/, '') + '…';
+    return Datos.fmtDia(p.d) + ' · ' + hh + ':' + mm + ' — ' + lugar;
+  },
+
+  /* Texto completo (title nativo): fecha/hora UTC + lugar + Cat + nota. */
+  _tituloEtqToca(p, nota) {
+    const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
+    return 'Tocatierra · ' + Datos.fmtReloj(p.d) + ' · ' + nota.lugar +
+      ' (' + (cat >= 1 ? 'Cat ' + cat : Datos.fmtCatCorto(cat)) + ') — ' + nota.nota;
+  },
+
+  /* Coloca etiquetas en hasta CUATRO niveles bajo el eje (anti-colisión por
+   * rectángulos de ancho estimado, margen 6 px; si un racimo los satura, al
+   * nivel menos cargado). Puro (sin DOM): devuelve [{e, centro, y}]. */
+  _colocarTocas(etiquetas, innerW, altoInt) {
+    const ANCHO_CAD = 6.1; // glifo mono a 10 px ≈ 0,61 em
+    const niveles = [altoInt + 36, altoInt + 48, altoInt + 60, altoInt + 72];
+    const ocupados = niveles.map(() => []);
+    return etiquetas.map(e => {
+      const ancho = Paneles._fmtEtqToca(e.p, e.nota).length * ANCHO_CAD + 4;
+      const centro = ancho >= innerW
+        ? innerW / 2
+        : Math.max(ancho / 2, Math.min(e.x, innerW - ancho / 2));
+      const rect = { x: centro - ancho / 2, w: ancho };
+      const choca = rs => rs.some(r => !(rect.x + rect.w + 6 <= r.x || r.x + r.w + 6 <= rect.x));
+      let nivel = ocupados.findIndex(rs => !choca(rs));
+      if (nivel < 0) { // racimo saturado: el nivel menos cargado
+        nivel = 0;
+        ocupados.forEach((rs, j) => { if (rs.length < ocupados[nivel].length) nivel = j; });
+      }
+      ocupados[nivel].push(rect);
+      return { e: e, centro: centro, y: niveles[nivel] };
+    });
+  },
+
+  /* Etiquetas de timestamp de los tocatierras CON nota, en el renglón
+   * reservado bajo el eje X del panel inferior: centradas bajo su línea y
+   * recortadas al área de trazado; NO tocan los ticks regulares (van en el
+   * renglón de arriba) y una marca corta en acento prolonga cada trazo de
+   * tocatierra bajo el eje. */
+  _etqTocatierraEje(g, o) {
+    const etiquetas = Paneles._tocasConNota(o.puntos, o.notas, o.x);
+    if (!etiquetas.length) return;
+    const colocadas = Paneles._colocarTocas(etiquetas, o.innerW, o.altoInt);
+    const grupo = g.append('g').attr('class', 'etq-tocas-eje');
+    colocadas.forEach(c => {
+      const e = c.e;
+
+      /* prolonga el trazo vertical del tocatierra (que termina en el eje)
+       * hasta el renglón de etiquetas */
+      grupo.append('line').attr('class', 'tick-toca-eje')
+        .attr('x1', e.x).attr('x2', e.x)
+        .attr('y1', o.altoInt).attr('y2', o.altoInt + 4);
+
+      grupo.append('text')
+        .attr('class', 'etq-toca-eje')
+        .attr('x', c.centro)
+        .attr('y', c.y)
+        .attr('text-anchor', 'middle')
+        .text(Paneles._fmtEtqToca(e.p, e.nota))
+        .append('title').text(Paneles._tituloEtqToca(e.p, e.nota));
     });
   },
 
@@ -216,11 +328,14 @@ const Paneles = {
   _panelAcumulado(marco, o) {
     const M = Object.assign({}, this.M);
     if (o.campo === 'danos_acum_usd') M.izq = 84; // las etiquetas del eje ($125 mil M) son más anchas
-    const alto = 176;
+    /* el panel INFERIOR reserva un renglón extra bajo el eje X para los
+     * timestamps de tocatierra; el área de trazado no cambia */
+    const extraInf = o.ultimo ? Paneles.ALTO_ETQ_TOCA : 0;
+    const alto = 176 + extraInf;
     const sec = this._envoltura(marco, o.ultimo ? 'panel-danos' : 'panel-muertes', o.titulo, '', '');
     const svg = sec.select('svg').attr('width', o.ancho).attr('height', alto);
     const innerW = o.ancho - M.izq - M.der;
-    const altoInt = alto - M.sup - M.inf;
+    const altoInt = alto - M.sup - (M.inf + extraInf);
     const g = svg.append('g').attr('transform', 'translate(' + M.izq + ',' + M.sup + ')');
 
     this._marcasTemporales(g, { x: o.x, puntos: o.puntos, altoInt: altoInt, innerW: innerW });
@@ -241,6 +356,9 @@ const Paneles = {
       g.append('g').attr('class', 'eje eje-x')
         .attr('transform', 'translate(0,' + altoInt + ')')
         .call(d3.axisBottom(o.x).ticks(6).tickFormat(d => Datos.fmtDia(d)));
+      Paneles._etqTocatierraEje(g, {
+        puntos: o.puntos, x: o.x, notas: o.notas, innerW: innerW, altoInt: altoInt
+      });
     } else {
       g.append('line').attr('x1', 0).attr('x2', innerW).attr('y1', altoInt).attr('y2', altoInt)
         .attr('stroke', this.LINEA_EJE);
@@ -266,155 +384,6 @@ const Paneles = {
           .style('opacity', vis ? 1 : 0);
       }
     };
-  },
-
-  /* =====================================================================
-   *  Vista comparar: 2 paneles sobre el eje de HORAS RELATIVAS
-   *  (0 = primer tocatierra de cada tormenta, dominio [−120, +240] h)
-   * ===================================================================== */
-
-  crearComparar(contenedor, opciones) {
-    const lo = opciones.lo != null ? opciones.lo : -120;
-    const hi = opciones.hi != null ? opciones.hi : 240;
-    const tormentaA = opciones.a, tormentaB = opciones.b;
-
-    /* serie recortada al dominio con continuidad de escalón en los bordes */
-    function serieRelativa(tormenta, campo) {
-      const pts = tormenta.puntos;
-      const primerToca = Datos.primerTocatierra(pts) || pts[0];
-      const t0 = +primerToca.d;
-      const serie = [];
-      for (let i = 0; i < pts.length; i++) {
-        const r = (+pts[i].d - t0) / 3.6e6;
-        if (r > hi) {
-          if (serie.length) serie.push({ rel: hi, val: serie[serie.length - 1].val });
-          break;
-        }
-        if (r >= lo) {
-          if (serie.length === 0 && i > 0) serie.push({ rel: lo, val: pts[i - 1][campo] });
-          serie.push({ rel: r, val: pts[i][campo] });
-        }
-      }
-      return serie;
-    }
-
-    const raiz = d3.select(contenedor);
-    raiz.html('');
-    const marco = raiz.append('div').attr('class', 'paneles-marco');
-
-    const par = [
-      { storm: tormentaA, color: this.PIZARRA },
-      { storm: tormentaB, color: this.SIENA }
-    ];
-
-    const M = { sup: 18, der: 66, izq: 46, inf: 40 };
-    const ALTO = 196;
-    let x = null;
-
-    function construir() {
-      const ancho = Math.max(480, contenedor.clientWidth || 980);
-      x = d3.scaleLinear().domain([lo, hi]).range([0, ancho - M.izq - M.der]);
-      marco.html('');
-
-      /* leyenda de los dos tonos neutros */
-      const leyenda = marco.append('div').attr('class', 'panel-cab compara-leyenda');
-      leyenda.html(par.map((c, k) =>
-        '<span class="pl-item"><span class="muestra" style="border-top-color:' + c.color + ';border-top-width:3px"></span>' +
-        c.storm.nombre + ' ' + c.storm.anio + '</span>').join(''))
-        .append('span').attr('class', 'panel-sub').text('horas relativas al primer tocatierra de cada tormenta');
-
-      Paneles._panelRelativo(marco, {
-        series: [
-          { datos: serieRelativa(tormentaA, 'muertes_acum'), color: Paneles.PIZARRA, nombre: tormentaA.nombre + ' ' + tormentaA.anio },
-          { datos: serieRelativa(tormentaB, 'muertes_acum'), color: Paneles.SIENA, nombre: tormentaB.nombre + ' ' + tormentaB.anio }
-        ],
-        titulo: 'Muertes acumuladas (por hora relativa)',
-        fmtTick: v => Datos.fmtEntero(v),
-        lo: lo, hi: hi, ancho: ancho, M: M, alto: 190
-      });
-
-      Paneles._panelRelativo(marco, {
-        series: [
-          { datos: serieRelativa(tormentaA, 'danos_acum_usd'), color: Paneles.PIZARRA, nombre: tormentaA.nombre + ' ' + tormentaA.anio },
-          { datos: serieRelativa(tormentaB, 'danos_acum_usd'), color: Paneles.SIENA, nombre: tormentaB.nombre + ' ' + tormentaB.anio }
-        ],
-        titulo: 'Daños acumulados (por hora relativa)',
-        fmtTick: v => Datos.fmtUSDCorto(v),
-        lo: lo, hi: hi, ancho: ancho, M: Object.assign({}, M, { izq: 84 }), alto: 190
-      });
-    }
-
-    construir();
-
-    return {
-      redibujar() { construir(); }
-    };
-  },
-
-  /* Panel relativo: dos series step-after superpuestas + línea de tocatierra en 0. */
-  _panelRelativo(marco, o) {
-    const sec = this._envoltura(marco, 'panel-rel', o.titulo, '', '');
-    const svg = sec.select('svg').attr('width', o.ancho).attr('height', o.alto);
-    const M = o.M;
-    const innerW = o.ancho - M.izq - M.der;
-    const altoInt = o.alto - M.sup - M.inf;
-    const g = svg.append('g').attr('transform', 'translate(' + M.izq + ',' + M.sup + ')');
-    const x = d3.scaleLinear().domain([o.lo, o.hi]).range([0, innerW]);
-
-    /* el escalón solo existe dentro del dominio: recorte por clipPath */
-    const idClip = 'clip-rel-' + Math.round(Math.random() * 1e9);
-    g.append('clipPath').attr('id', idClip)
-      .append('rect').attr('x', 0).attr('y', -10)
-      .attr('width', innerW).attr('height', altoInt + 20);
-    const recortes = g.append('g').attr('clip-path', 'url(#' + idClip + ')');
-
-    /* línea vertical en 0 · tocatierra (solo si el dominio la contiene) */
-    if (o.lo < 0 && o.hi > 0) {
-      g.append('line').attr('x1', x(0)).attr('x2', x(0))
-        .attr('y1', 0).attr('y2', altoInt)
-        .attr('stroke', '#d5e1ef').attr('stroke-width', 1.4).attr('opacity', 0.85);
-      g.append('path')
-        .attr('d', 'M' + (x(0) - 4.5) + ' 0 L' + (x(0) + 4.5) + ' 0 L' + x(0) + ' 7 Z')
-        .attr('fill', '#d5e1ef');
-    }
-
-    const y = d3.scaleLinear()
-      .domain([0, Math.max(
-        o.series[0].datos.length ? d3.max(o.series[0].datos, d => d.val) : 1,
-        o.series[1].datos.length ? d3.max(o.series[1].datos, d => d.val) : 1
-      ) || 1]).nice().range([altoInt, 0]);
-
-    o.series.forEach((s, k) => {
-      if (!s.datos.length) return;
-      const area = d3.area().curve(d3.curveStepAfter)
-        .x(d => x(d.rel)).y0(altoInt).y1(d => y(d.val));
-      const lin = d3.line().curve(d3.curveStepAfter)
-        .x(d => x(d.rel)).y(d => y(d.val));
-      recortes.append('path').attr('d', area(s.datos))
-        .attr('fill', k === 0 ? 'rgba(169,195,220,0.13)' : 'rgba(220,178,135,0.12)');
-      recortes.append('path').attr('d', lin(s.datos))
-        .attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2);
-      /* nombre de la tormenta al final de su línea */
-      const ultimoPto = s.datos[s.datos.length - 1];
-      recortes.append('text')
-        .attr('class', 'etq-serie')
-        .attr('x', x(Math.min(ultimoPto.rel, o.hi)) - 4)
-        .attr('y', Math.max(y(ultimoPto.val) - 6 - k * 13, 10))
-        .attr('text-anchor', 'end')
-        .attr('fill', s.color)
-        .text(s.nombre);
-    });
-
-    const marcas = [];
-    for (let h = Math.ceil(o.lo / 48) * 48; h <= o.hi; h += 48) marcas.push(h);
-    if (!marcas.includes(0) && o.lo < 0 && o.hi > 0) marcas.push(0);
-    marcas.sort((a, b) => a - b);
-
-    g.append('g').attr('class', 'eje').call(d3.axisLeft(y).ticks(4).tickFormat(o.fmtTick));
-    g.append('g').attr('class', 'eje eje-x')
-      .attr('transform', 'translate(0,' + altoInt + ')')
-      .call(d3.axisBottom(x).tickValues(marcas)
-        .tickFormat(v => v === 0 ? '0 · tocatierra' : Datos.fmtHoraRelativa(v)));
   }
 
 };

@@ -5,10 +5,11 @@
 
 const Datos = {
 
-  /* Paleta de categoría Saffir–Simpson (semáforo verde→rojo), fija.
-   * Los 6 pasos difieren en luminosidad/saturación además del matiz para
-   * seguir siendo distinguibles en deuteranopia. Índice = cat_ss 0–5. */
-  CAT_COLORES: ['#29c47f', '#8fc72f', '#d8c21c', '#f0952e', '#ef5f2d', '#e63946'],
+  /* Paleta de categoría Saffir–Simpson (V2: rampa de ROJOS) — fija.
+   * Monótona en oscuridad: cat más alta = más grave = más oscura. Los 6 pasos
+   * se distinguen por LUMINOSIDAD (además del matiz dentro del rojo), así
+   * siguen separándose en deuteranopia. Índice = cat_ss 0–5. */
+  CAT_COLORES: ['#f2a08f', '#e47762', '#d0503f', '#b33326', '#8f221c', '#6b1414'],
 
   MESES: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
 
@@ -40,6 +41,29 @@ const Datos = {
 
   ordenPorMuertes() {
     return (this.indice || []).slice().sort((a, b) => b.muertes_total - a.muertes_total);
+  },
+
+  /* Frase editorial «potencia ≠ destructividad» (V2): la tormenta con
+   * cat_pico < 5 que supera en muertes al MAYOR número de huracanes de
+   * Cat 5. Se computa del índice cargado (nunca a mano) y devuelve null si
+   * ninguna Cat < 5 supera a ninguna Cat 5 (la app muestra entonces una
+   * frase genérica sin cifras). */
+  frasePotenciaImpacto() {
+    const todas = this.indice || [];
+    const cat5 = todas.filter(t => (t.cat_pico | 0) === 5);
+    let mejor = null;
+    let mejorN = 0;
+    todas.forEach(t => {
+      if ((t.cat_pico | 0) >= 5) return;
+      const n = cat5.filter(m => (+m.muertes_total || 0) < (+t.muertes_total || 0)).length;
+      if (n < mejorN) return; // solo interesa el máximo
+      if (n === mejorN && mejor && (+t.muertes_total || 0) <= (+mejor.muertes_total || 0)) return; // empate: gana más muertes
+      mejor = t;
+      mejorN = n;
+    });
+    if (!mejor || mejorN <= 0) return null;
+    return 'La potencia no predice el impacto: ' + mejor.nombre + ' (Cat ' + (mejor.cat_pico | 0) +
+      ') superó en muertes a ' + mejorN + ' ' + (mejorN === 1 ? 'huracán' : 'huracanes') + ' de Cat 5.';
   },
 
   /* Carga (con caché) de una tormenta individual. */

@@ -12,8 +12,8 @@
  *   DRON (presión):   oscPrincipal (f, triangle, +5 cents) ─┐
  *                     oscSub (f/2, −7 cents) ────────────────┴→ dronGain → dronFiltro (LP) → masterGain
  *   ARMÓNICO (IR):    oscArmonico (3·f) → waveShaper (clip muy suave) → armonicoGain → masterGain
- *   VIENTO:           huracan.mp3 (loop) → vientoNormalGain ───┐
- *                     huracanaterrador.mp3 (loop) → vientoTerrorGain ─┴→ vientoFiltro (LP) → masterGain
+ *   VIENTO:           huracan.mp3 (loop: tramo elegido por análisis) → vientoNormalGain ────────────┐
+ *                     huracanaterrador.mp3 (loop analizado, rate 0,88) → LP 2,2 kHz → vientoTerrorGain ─┴→ vientoFiltro (LP) → masterGain
  *   ONE-SHOTS:        bufferSource → ganancia puntual → masterGain
  *
  * Mapeos dato → parámetro
@@ -22,19 +22,57 @@
  *   dron f = 30·2^(u·2.2) Hz (×2,5 en IR) · cutoff LP = 280 − u·200 Hz
  *   viento (grabaciones reales): cat_ss ≥ 4 → loop terrorífico; cat_ss < 4 → loop normal
  *           (crossfade ~0,6 s al cruzar el umbral 3↔4); ganancia por categoría
- *           0,04→0,58 con modulación fina ±20 % según viento_kt;
+ *           0,07→0,85 con modulación fina ±20 % según viento_kt; el tramo de loop de cada
+ *           grabación se elige por análisis RMS/ZCR (evita sirenas) y se refina su inicio
+ *           para no arrancar en silencio; el terrorífico analiza solo a partir de ~20 s
+ *           (su arranque es mudo) y añade rate 0,88 y lowpass propio ~2,2 kHz;
  *           tocatierra: lowpass compartido a 1.200 Hz (seco); en mar abierto a 18 kHz
  *   muertes: N = min(6, 1+⌊Δ/25⌋) pulsos repartidos en la ventana real del paso
  *   daños:   N = min(12, 1+⌊Δ/5e9⌋) ráfagas con jitter y ganancia ∝ log10(Δ)
  */
 
 // ---------- Ajustes de la capa de viento real (huracan / huracanaterrador) ----------
-// Ganancia del loop por categoría (cat_ss 0..5): niveles claramente separados.
-const VIENTO_GANANCIA_CAT = [0.04, 0.09, 0.16, 0.27, 0.42, 0.58];
+// Ganancia del loop por categoría (cat_ss 0..5): niveles claramente separados y por
+// encima de los one-shots para que el viento real domine la mezcla (antes ~0,04–0,58).
+const VIENTO_GANANCIA_CAT = [0.07, 0.15, 0.27, 0.46, 0.71, 0.85];
 const VIENTO_MODULACION = 0.20;    // variación fina ±20 % según viento_kt dentro de la categoría
 const VIENTO_CUTOFF_MAR = 18000;   // lowpass compartido abierto en mar
 const VIENTO_CUTOFF_TIERRA = 1200; // timbre seco tras tocatierra
 const VIENTO_CROSSFADE = 0.6;      // segundos de crossfade al cruzar el umbral cat 3↔4
+
+// Loop terrorífico (huracanaterrador, cat ≥ 4): la grabación trae silbidos/sirenas
+// constantes; se le pone lowpass propio y se reproduce algo más grave para que
+// suene a viento y no a "pitido".
+const VIENTO_CUTOFF_TERROR = 2200; // lowpass propio del loop terrorífico (~2,2 kHz)
+const VIENTO_RATE_TERROR = 0.88;   // playbackRate del loop terrorífico (más profundo)
+
+// Balance de los one-shots frente al viento real (que ahora domina la mezcla).
+const TOCATIERRA_GANANCIA = 0.55;   // antes 0,95: el golpe se destaca sin aplastar el viento
+const RAFAGA_BALANCE = 0.75;       // −25 % a las ráfagas de daños (el pulso de muerte no cambia)
+
+// Análisis de contenido para elegir el tramo de loop de cada grabación (RMS + ZCR).
+const LOOP_VENTANA_ANALISIS = 1.0; // s de ventana deslizante
+const LOOP_SALTO_ANALISIS = 0.5;   // s de salto entre ventanas
+const LOOP_MIN_S = 4;              // duración mínima aceptable del tramo de loop
+const LOOP_MAX_S = 14;             // duración máxima del tramo de loop
+
+// Refinamiento del inicio del loop (aplica a AMBOS loops): tras elegir el tramo,
+// el loopStart avanza hasta el primer frame corto con RMS ≥ LOOP_REF_RMS_PCT del
+// RMS máximo del buffer (umbral relativo: salta silencios y respiraciones leves
+// sin depender del nivel absoluto) y retrocede LOOP_REF_MARGEN para no cortar el
+// ataque. Resuelve el silencio inicial de huracan.mp3 (loop normal).
+const LOOP_REF_RMS_PCT = 0.40;   // fracción del RMS máximo del buffer
+const LOOP_REF_MARGEN = 0.15;    // s de margen antes del primer frame audible
+const LOOP_REF_FRAME = 0.02;     // s por frame del análisis de refinamiento
+
+// huracanaterrador.mp3 (~72 s) trae ~20 s de silencio/relleno al comienzo: su
+// análisis y elección de tramo se restringen a partir de este instante. El loop
+// normal usa 0: su silencio inicial lo resuelve el refinamiento de arriba.
+const LOOP_SKIP_TERROR = 20;    // s a saltar al inicio del loop terrorífico
+
+// Cola reservada al final de cada grabación: el loopEnd nunca supera
+// duración − LOOP_MARGEN_FIN (evita fades/silencios de cierre).
+const LOOP_MARGEN_FIN = 1.0;    // s
 
 class MotorAudio {
   constructor() {
@@ -54,6 +92,10 @@ class MotorAudio {
 
     // Buffers mp3 decodificados (dos grabaciones reales de viento + tres one-shots).
     this._buffers = { tocatierra: null, pulso: null, rafaga: null, huracan: null, huracanaterrador: null };
+
+    // Tramo de loop elegido por análisis de contenido para cada grabación
+    // (ver _analizarLoop); se expone en _debug() como loopSegNormal/loopSegTerror.
+    this._loopInfo = { normal: null, terrorifico: null };
 
     // Estado derivado del dato, para re-aplicar parámetros al reanudar.
     this._estado = {
@@ -316,18 +358,27 @@ class MotorAudio {
     vientoFiltro.frequency.value = VIENTO_CUTOFF_MAR;
     vientoFiltro.Q.value = 0.7;
 
+    // Lowpass propio del loop terrorífico: apaga el silbido agudo constante de esa
+    // grabación sin oscurecer el loop normal. El filtro compartido (mar/tierra)
+    // sigue después, igual que antes.
+    const filtroVientoTerror = ctx.createBiquadFilter();
+    filtroVientoTerror.type = 'lowpass';
+    filtroVientoTerror.frequency.value = VIENTO_CUTOFF_TERROR;
+    filtroVientoTerror.Q.value = 0.7;
+
     fuenteVientoNormal.connect(vientoNormalGain);
-    fuenteVientoTerror.connect(vientoTerrorGain);
+    fuenteVientoTerror.connect(filtroVientoTerror);
+    filtroVientoTerror.connect(vientoTerrorGain);
     vientoNormalGain.connect(vientoFiltro);
     vientoTerrorGain.connect(vientoFiltro);
     vientoFiltro.connect(masterGain);
 
-    // Arrancar fuentes continuas.
-    // Las grabaciones traen ~5 s de silencio digital al principio (la terrorífica
-    // también al final); se recortan esos bordes en el loop para que no haya
-    // calvas de aire de varios segundos en cada vuelta.
-    this._iniciarLoopReal(fuenteVientoNormal);
-    this._iniciarLoopReal(fuenteVientoTerror);
+    // Arrancar fuentes continuas con el tramo de loop elegido por análisis de
+    // contenido (RMS+ZCR): descarta tramos tonales (sirenas/alarmas) y refina el
+    // inicio para no arrancar en silencio; el terrorífico además analiza solo a
+    // partir de LOOP_SKIP_TERROR (~20 s, su arranque es mudo) y va más grave.
+    this._configurarLoopViento(fuenteVientoNormal, 'normal', { playbackRate: 1, saltarInicio: 0 });
+    this._configurarLoopViento(fuenteVientoTerror, 'terrorifico', { playbackRate: VIENTO_RATE_TERROR, saltarInicio: LOOP_SKIP_TERROR });
     oscPrincipal.start();
     oscSub.start();
     oscArmonico.start();
@@ -343,6 +394,7 @@ class MotorAudio {
       armonicoGain: armonicoGain,
       fuenteVientoNormal: fuenteVientoNormal,
       fuenteVientoTerror: fuenteVientoTerror,
+      filtroVientoTerror: filtroVientoTerror,
       vientoNormalGain: vientoNormalGain,
       vientoTerrorGain: vientoTerrorGain,
       vientoFiltro: vientoFiltro,
@@ -363,30 +415,253 @@ class MotorAudio {
   }
 
   /**
-   * Arranca un loop de viento real saltando el silencio de los bordes.
-   * Calcula loopStart/loopEnd del propio buffer con umbral ≈ −60 dB y un
-   * margen de 50 ms para que el salto del loop caiga en zona silenciosa
-   * (sin clics). Si el buffer es prácticamente silencioso, deja el loop entero.
+   * Configura y arranca un loop de viento con el tramo elegido por _analizarLoop
+   * (reemplaza al antiguo recorte de silencios de borde). `clave` = 'normal' |
+   * 'terrorifico'; `opciones.saltarInicio` (s) se salta al inicio del análisis
+   * (el terrorífico ignora así sus primeros ~20 s mudos); guarda el resultado en
+   * this._loopInfo para _debug().
    */
-  _iniciarLoopReal(fuente) {
-    const datos = fuente.buffer.getChannelData(0);
-    const umbral = 0.001; // ≈ −60 dB
-    const margen = 0.05;  // s
-    const tasa = fuente.buffer.sampleRate;
+  _configurarLoopViento(fuente, clave, opciones) {
+    const saltar = opciones && opciones.saltarInicio > 0 ? opciones.saltarInicio : 0;
+    const seg = this._analizarLoop(fuente.buffer, saltar);
+    fuente.loopStart = seg.inicio;
+    fuente.loopEnd = Math.min(seg.fin, fuente.buffer.duration);
+    if (opciones && opciones.playbackRate) fuente.playbackRate.value = opciones.playbackRate;
+    this._loopInfo[clave] = seg;
+    fuente.start(0, fuente.loopStart);
+  }
 
-    let inicio = 0;
-    while (inicio < datos.length && Math.abs(datos[inicio]) < umbral) inicio++;
-    let fin = datos.length - 1;
-    while (fin > inicio && Math.abs(datos[fin]) < umbral) fin--;
+  /**
+   * Elige el tramo de loop de una grabación de viento por análisis de contenido
+   * (runtime, barato: una pasada O(n) más una búsqueda O(m·k) sobre ~m≈duración/0,5).
+   *   - `saltarInicio` (s): la zona analizable arranca aquí (el terrorífico salta
+   *     sus primeros ~20 s, mudos). La zona reserva siempre LOOP_MARGEN_FIN al
+   *     final: loopEnd ≤ duración − LOOP_MARGEN_FIN.
+   *   - Ventanas deslizantes de 1 s (salto 0,5 s): por ventana se calcula RMS y la
+   *     tasa de cruces por cero (ZCR, proxy de tonalidad: tono sostenido → ZCR bajo
+   *     y estable; viento broadband → ZCR alto e irregular).
+   *   - Peso = energía normalizada × irregularidad del ZCR × tendencia a ZCR alto.
+   *     Los tramos dominados por tono sostenido (RMS alto con ZCR muy por debajo
+   *     de la mediana audible: sirenas/alarmas) reciben peso negativo, de modo que
+   *     el tramo elegido no los cruza.
+   *   - Se elige el tramo contiguo de máximo peso con duración entre LOOP_MIN_S y
+   *     LOOP_MAX_S y se ajustan los bordes al cruce por cero más cercano (±40 ms)
+   *     para que el salto del loop no chasquee.
+   *   - Al final se refina el inicio (_refinarInicioLoop): aunque el análisis haya
+   *     elegido un tramo que arranca en una parte muda, el loop salta ese silencio.
+   * Si la zona analizable es demasiado corta o prácticamente silenciosa (p. ej. el
+   * tramo ≥20 s del terrorífico sin contenido), usa como fallback la grabación
+   * completa + el mismo refinamiento de inicio, recortando la cola.
+   */
+  _analizarLoop(buffer, saltarInicio) {
+    const sr = buffer.sampleRate;
+    const dur = buffer.duration;
+    const datos = buffer.getChannelData(0); // canal 0 basta: contenido correlacionado
+    const n = datos.length;
 
-    if (inicio >= fin) { // buffer silencioso: no hay nada que recortar
-      fuente.start();
-      return;
+    const ventana = Math.max(64, Math.round(LOOP_VENTANA_ANALISIS * sr));
+    const salto = Math.max(32, Math.round(LOOP_SALTO_ANALISIS * sr));
+
+    // Zona analizable [base, tope): salta el arranque pedido (terrorífico: ~20 s
+    // mudos) y reserva la cola (loopEnd ≤ duración − LOOP_MARGEN_FIN).
+    const saltar = saltarInicio > 0 ? saltarInicio : 0;
+    const base = this._acotar(Math.round(saltar * sr), 0, Math.max(0, n - 1));
+    const tope = Math.min(n, Math.max(base + ventana, n - Math.round(LOOP_MARGEN_FIN * sr)));
+    const m = tope - ventana >= base ? Math.floor((tope - ventana - base) / salto) + 1 : 0;
+
+    const rms = new Float64Array(m);
+    const zcr = new Float64Array(m);
+    for (let w = 0; w < m; w++) {
+      const ini = base + w * salto;
+      const fin = Math.min(tope, ini + ventana);
+      let suma = 0;
+      let cruces = 0;
+      let positivo = datos[ini] >= 0;
+      for (let i = ini; i < fin; i++) {
+        const x = datos[i];
+        suma += x * x;
+        const signo = x >= 0;
+        if (signo !== positivo) cruces++;
+        positivo = signo;
+      }
+      const cuenta = Math.max(1, fin - ini);
+      rms[w] = Math.sqrt(suma / cuenta);
+      zcr[w] = cruces / cuenta; // cruces por muestra
     }
 
-    fuente.loopStart = Math.max(0, inicio / tasa - margen);
-    fuente.loopEnd = Math.min(fuente.buffer.duration, (fin + 1) / tasa + margen);
-    fuente.start(0, fuente.loopStart);
+    // Estadísticas adaptativas sobre ventanas audibles (el silencio y el hiss
+    // apenas rozan las cuerdas y falsearían los umbrales de ZCR).
+    let rmsMax = 0;
+    let zcrMax = 0;
+    for (let w = 0; w < m; w++) {
+      if (rms[w] > rmsMax) rmsMax = rms[w];
+      if (zcr[w] > zcrMax) zcrMax = zcr[w];
+    }
+    const audibles = [];
+    for (let w = 0; w < m; w++) {
+      if (rmsMax > 0 && rms[w] >= 0.1 * rmsMax) audibles.push(zcr[w]);
+    }
+    audibles.sort((a, b) => a - b);
+    const zcrRef = audibles.length ? audibles[Math.floor(audibles.length / 2)] : 0;
+
+    // Peso por ventana: energía × irregularidad del ZCR × "broadbandness".
+    // Tono sostenido (sirena/alarma): mucho RMS con ZCR muy por debajo de la
+    // referencia audible → peso negativo, para que el tramo elegido no lo cruce.
+    const pesos = new Float64Array(m);
+    const tonales = new Uint8Array(m);
+    for (let w = 0; w < m; w++) {
+      const rmsNorm = rmsMax > 1e-5 ? rms[w] / rmsMax : 0;
+      const zcrNorm = zcrMax > 0 ? zcr[w] / zcrMax : 0;
+      const irregular = Math.min(1, Math.abs(zcr[w] - zcrRef) / (zcrRef + 1e-9));
+      tonales[w] = (rmsNorm >= 0.5 && zcrRef > 0 && zcr[w] <= zcrRef * 0.55) ? 1 : 0;
+      let peso = rmsNorm * (0.5 + 0.5 * irregular) * (0.75 + 0.25 * zcrNorm);
+      if (tonales[w]) peso = -rmsNorm;
+      pesos[w] = peso;
+    }
+
+    // Duración del tramo en nº de ventanas. Ventana w cubre [w·salto, w·salto+ventana].
+    const ventanasMin = Math.max(1, Math.ceil((LOOP_MIN_S * sr - ventana) / salto) + 1);
+    const ventanasMax = Math.max(ventanasMin, Math.min(m, Math.floor((LOOP_MAX_S * sr - ventana) / salto) + 1));
+
+    if (m < ventanasMin || rmsMax < 1e-4) {
+      // Zona corta o casi silenciosa (p. ej. el tramo ≥20 s del terrorífico sin
+      // contenido audible): fallback = grabación completa, con el mismo
+      // refinamiento de inicio y la cola reservada.
+      const tramoFallback = this._finalizarTramo(datos, sr, dur, 0, dur);
+      return { inicio: tramoFallback.inicio, fin: tramoFallback.fin, zcrRef: Number(zcrRef.toFixed(4)), tonalPct: 0 };
+    }
+
+    // Tramo contiguo de máximo peso (sumas prefijas; m es pequeño, ~duración/0,5 s).
+    const pref = new Float64Array(m + 1);
+    for (let w = 0; w < m; w++) pref[w + 1] = pref[w] + pesos[w];
+
+    let mejorI = 0;
+    let mejorJ = ventanasMin - 1;
+    let mejorSuma = -Infinity;
+    for (let i = 0; i < m; i++) {
+      const jMax = Math.min(m - 1, i + ventanasMax - 1);
+      const jMin = i + ventanasMin - 1;
+      for (let j = jMin; j <= jMax; j++) {
+        const suma = pref[j + 1] - pref[i];
+        if (suma > mejorSuma + 1e-12) {
+          mejorSuma = suma;
+          mejorI = i;
+          mejorJ = j;
+        }
+      }
+    }
+
+    let inicio = (base + mejorI * salto) / sr;
+    let fin = Math.min(tope, base + mejorJ * salto + ventana) / sr;
+
+    // Ajuste fino a cruces por cero cercanos (±40 ms): el salto del loop no chasquea.
+    const radio = Math.round(0.04 * sr);
+    const iniAjustado = this._cruceroCercano(datos, Math.round(inicio * sr), radio);
+    const finAjustado = this._cruceroCercano(datos, Math.round(fin * sr), radio);
+    if (iniAjustado !== null) inicio = iniAjustado / sr;
+    if (finAjustado !== null) fin = finAjustado / sr;
+    if (fin - inicio < 0.25) {
+      // El ajuste nunca debería invertir el tramo; si pasa, se conserva el analítico.
+      inicio = (base + mejorI * salto) / sr;
+      fin = Math.min(tope, base + mejorJ * salto + ventana) / sr;
+    }
+
+    // El tramo nunca arranca antes de la zona analizable (terrorífico: ≥20 s), ni
+    // siquiera tras el ajuste fino a cruces por cero (±40 ms).
+    if (inicio < base / sr) inicio = base / sr;
+
+    let cuentaTonal = 0;
+    for (let w = mejorI; w <= mejorJ; w++) cuentaTonal += tonales[w];
+    const tonalPct = Math.round((100 * cuentaTonal) / (mejorJ - mejorI + 1));
+
+    // Epílogo común: refinamiento del inicio (salta el silencio inicial) + cola reservada.
+    const tramo = this._finalizarTramo(datos, sr, dur, inicio, fin);
+
+    return {
+      inicio: tramo.inicio,
+      fin: tramo.fin,
+      zcrRef: Number(zcrRef.toFixed(4)),
+      tonalPct: tonalPct,
+    };
+  }
+
+  /**
+   * Epílogo común del tramo de loop: refina el inicio con _refinarInicioLoop y
+   * garantiza loopEnd ≤ duración − LOOP_MARGEN_FIN (si el buffer fuera diminuto,
+   * conserva al menos ~0,25 s de tramo). Devuelve { inicio, fin } en segundos.
+   */
+  _finalizarTramo(datos, sr, dur, inicio, fin) {
+    const inicioRefinado = this._refinarInicioLoop(datos, sr, inicio, fin);
+    let finFinal = fin;
+    const finTope = dur - LOOP_MARGEN_FIN;
+    if (finFinal > finTope) finFinal = Math.max(finTope, Math.min(inicioRefinado + 0.25, dur));
+    return { inicio: inicioRefinado, fin: finFinal };
+  }
+
+  /**
+   * Refinamiento del inicio del loop (ambos loops): busca, a partir del inicio
+   * elegido por el análisis, el primer frame corto (LOOP_REF_FRAME s) con RMS ≥
+   * LOOP_REF_RMS_PCT del RMS máximo del buffer —umbral relativo que descarta
+   * silencios y respiraciones leves sin depender del nivel absoluto— y retrocede
+   * LOOP_REF_MARGEN para no cortar el ataque del viento. La detección se confirma
+   * con el frame siguiente (~30 ms) para no confundir un clic aislado con el
+   * arranque real. Solo avanza (jamás retrocede el inicio elegido) y nunca deja
+   * menos de ~0,5 s de tramo hasta `fin`; si no encuentra contenido por encima del
+   * umbral, conserva `inicio`.
+   */
+  _refinarInicioLoop(datos, sr, inicio, fin) {
+    const n = datos.length;
+    const frame = Math.max(64, Math.round(LOOP_REF_FRAME * sr));
+    const salto = Math.max(32, Math.round(frame / 2));
+    const desdeMuestra = this._acotar(Math.round(inicio * sr), 0, Math.max(0, n - 1));
+
+    // RMS por frame corto sobre el buffer completo: máximo de referencia (no solo
+    // la zona analizada) y búsqueda del primer frame audible desde el inicio elegido.
+    const mFrames = Math.max(1, Math.ceil(n / salto));
+    const rmsFrames = new Float64Array(mFrames);
+    let rmsMax = 0;
+    for (let f = 0; f < mFrames; f++) {
+      const ini = f * salto;
+      const finFrame = Math.min(n, ini + frame);
+      let suma = 0;
+      for (let i = ini; i < finFrame; i++) {
+        const x = datos[i];
+        suma += x * x;
+      }
+      const r = Math.sqrt(suma / Math.max(1, finFrame - ini));
+      rmsFrames[f] = r;
+      if (r > rmsMax) rmsMax = r;
+    }
+    if (rmsMax < 1e-4) return inicio; // buffer prácticamente silencioso: nada que refinar
+
+    const umbral = rmsMax * LOOP_REF_RMS_PCT;
+    const fDesde = Math.min(mFrames - 1, Math.floor(desdeMuestra / salto));
+    let audible = -1;
+    for (let f = fDesde; f < mFrames; f++) {
+      const aqui = rmsFrames[f] >= umbral && (f + 1 >= mFrames || rmsFrames[f + 1] >= umbral);
+      if (aqui) { audible = f * salto; break; }
+    }
+    if (audible < 0) return inicio; // nada por encima del umbral: conservar el inicio elegido
+
+    const refinado = Math.max(0, audible / sr - LOOP_REF_MARGEN);
+    // Solo avanza; si dejara un tramo inviable, se conserva el inicio original.
+    if (refinado <= inicio || fin - refinado < 0.5) return inicio;
+    return refinado;
+  }
+
+  /** Índice del cruce por cero (cambio de signo) más cercano a `centro` dentro
+   *  de ±radio muestras; null si no se encuentra ninguno. */
+  _cruceroCercano(datos, centro, radio) {
+    const n = datos.length;
+    const desde = Math.max(0, centro - radio);
+    const hasta = Math.min(n - 2, centro + radio);
+    for (let d = 0; d <= radio; d++) {
+      const a = centro - d;
+      if (a >= desde && a <= hasta && (datos[a] >= 0) !== (datos[a + 1] >= 0)) return a;
+      const b = centro + d;
+      if (b >= desde && b <= hasta && (datos[b] >= 0) !== (datos[b + 1] >= 0)) return b;
+    }
+    return null;
   }
 
   // ============================================================
@@ -514,9 +789,9 @@ class MotorAudio {
   // Eventos (one-shots)
   // ============================================================
 
-  /** Golpe de tocatierra con ganancia fija alta. */
+  /** Golpe de tocatierra: fijo, por debajo del viento (que ahora domina la mezcla). */
   _dispararTocatierra(ahora) {
-    this._dispararMuestra(this._buffers.tocatierra, { cuando: ahora, ganancia: 0.95 });
+    this._dispararMuestra(this._buffers.tocatierra, { cuando: ahora, ganancia: TOCATIERRA_GANANCIA });
   }
 
   /**
@@ -585,10 +860,12 @@ class MotorAudio {
     return this._acotar(ahora - this._instanteUltimoPunto, 0.15, 1.2);
   }
 
-  /** Ganancia ∝ log10 del delta en USD (saltos de miles de millones se oyen más). */
+  /** Ganancia ∝ log10 del delta en USD (saltos de miles de millones se oyen más),
+   *  ×0,75 para que las ráfagas se destaquen sin aplastar el viento real. */
   _gananciaLog(delta) {
     const decadas = Math.log10(delta / 1e9 + 1);
-    return this._acotar(0.18 + 0.18 * decadas, 0.15, 0.7);
+    const base = 0.18 + 0.18 * decadas;
+    return this._acotar(base * RAFAGA_BALANCE, 0.15 * RAFAGA_BALANCE, 0.7 * RAFAGA_BALANCE);
   }
 
   // ============================================================
@@ -627,6 +904,12 @@ class MotorAudio {
       vientoLoop: loop,
       gananciaViento: nodos ? nodos[activa].gain.value : null,
       cutoffVientoFiltro: nodos ? nodos.vientoFiltro.frequency.value : null,
+      cutoffVientoTerror: nodos ? nodos.filtroVientoTerror.frequency.value : null,
+      rateVientoTerror: nodos ? nodos.fuenteVientoTerror.playbackRate.value : null,
+      loopSegNormal: this._loopInfo.normal ? [Number(this._loopInfo.normal.inicio.toFixed(2)), Number(this._loopInfo.normal.fin.toFixed(2))] : null,
+      loopSegTerror: this._loopInfo.terrorifico ? [Number(this._loopInfo.terrorifico.inicio.toFixed(2)), Number(this._loopInfo.terrorifico.fin.toFixed(2))] : null,
+      loopTonalNormal: this._loopInfo.normal ? this._loopInfo.normal.tonalPct : null,
+      loopTonalTerror: this._loopInfo.terrorifico ? this._loopInfo.terrorifico.tonalPct : null,
       cutoffTierra: this._estado.sobreTierra,
       gananciaVientoNormal: nodos ? nodos.vientoNormalGain.gain.value : null,
       gananciaVientoTerror: nodos ? nodos.vientoTerrorGain.gain.value : null,

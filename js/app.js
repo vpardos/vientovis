@@ -1,8 +1,14 @@
 'use strict';
-/* app.js — global `App`: routing por hash, galería, vista tormenta,
- * reproductor + wiring del motor de audio (siempre envuelto en try/catch:
- * un fallo de audio jamás rompe la UI) y ficha on demand.
- *   #galeria · #tormenta/<id> · #comparar[?a=<id>&b=<id>] */
+/* app.js — global `App`: routing por hash y PANTALLA PRINCIPAL (V2).
+ * La visualización de tormenta ES la portada: héroe compacto (título,
+ * descripción y frase editorial «potencia ≠ destructividad» computada del
+ * índice), un selector de huracanes ordenado por MUERTES y, debajo, la vista
+ * tormenta completa (mapa satelital + 3 paneles + reproductor + contador).
+ * Rutas: #/ · #galeria (alias histórico, también es la portada) ·
+ * #tormenta/<id>; cualquier hash desconocido cae a la portada. El selector
+ * cambia de huracán SIN recargar (solo re-render de la vista) y reescribe el
+ * hash con history.replaceState para conservar los enlaces profundos.
+ * El reproductor avanza SIEMPRE a ×0,25 (un punto de 6 h cada 2 s reales). */
 
 const App = {
 
@@ -12,9 +18,10 @@ const App = {
   _estado: null,
   _paneles: null,
   _mapa: null,
-  _minis: null,
   _limpieza: [],
   _token: 0,
+  _notasPromesa: null, // carga única de data/notas-tocatierras.json (caché en memoria)
+  _raizTormenta: null, // el div donde la vista tormenta se monta sobre la portada
 
   /* ===================== arranque y rutas ===================== */
 
@@ -37,16 +44,18 @@ const App = {
   _parseHash() {
     let crudo = '';
     try { crudo = decodeURIComponent(location.hash.slice(1)); } catch (e) { crudo = ''; }
-    if (!crudo) return { vista: 'galeria' };
-    const partes = crudo.split('?');
-    const ruta = partes[0];
-    const params = new URLSearchParams(partes[1] || '');
-    if (ruta === 'comparar') return { vista: 'comparar', a: params.get('a'), b: params.get('b') };
+    const ruta = crudo.split('?')[0];
+    /* la tormenta de MÁS MUERTES es la portada por defecto */
+    const idPortada = () => {
+      const orden = Datos.ordenPorMuertes();
+      return orden.length ? orden[0].id : null;
+    };
     if (ruta.indexOf('tormenta/') === 0) {
       const id = ruta.slice('tormenta/'.length);
-      if (Datos.porId(id)) return { vista: 'tormenta', id: id };
+      if (Datos.porId(id)) return { id: id, profundo: true };
     }
-    return { vista: 'galeria' };
+    /* raíz (# y #/), #galeria (alias histórico) y cualquier hash raro → portada */
+    return { id: idPortada(), profundo: false };
   },
 
   _rotear() {
@@ -54,49 +63,46 @@ const App = {
      * las capas seguían sonando en la vista siguiente. Corto el playback (rAF
      * + temporizadores + motor.setReproduciendo(false)) ANTES de desmontar:
      * el motor atenúa el master a 0 (~0,6 s) y calla por completo. */
-    const previa = this._estado;
-    if (previa && previa.tipo === 'tormenta') {
-      if (previa.raf) cancelAnimationFrame(previa.raf);
-      previa.raf = null;
-      previa.reproducido = false;
-      previa.ultimoTs = null;
-      this._conAudio('setReproduciendo', false);
-    }
-    this._desmontar();
     const dest = this._parseHash();
+    this._pararPlayback();
+    this._desmontar();
     const token = ++this._token;
     window.scrollTo(0, 0);
 
-    this._marcarNav(dest.vista === 'tormenta' ? 'galeria' : dest.vista);
+    /* cualquier hash raro o viejo (p. ej. #comparar) cae a la portada y la
+     * URL se normaliza a #/ (replaceState: sin entrada al historial) */
+    if (!dest.profundo) { try { history.replaceState(null, '', '#/'); } catch (e) { /* file:// etc */ } }
 
-    if (dest.vista === 'comparar') {
-      document.title = 'Vientovis — Comparar tormentas';
-      this._vistaComparar(dest.a, dest.b, token);
-    } else if (dest.vista === 'tormenta') {
-      this._vistaTormenta(dest.id, token);
-    } else {
-      document.title = 'El impacto de los huracanes más relevantes de los últimos años';
-      this._vistaGaleria(token);
-    }
+    const meta = Datos.porId(dest.id);
+    document.title = dest.profundo && meta
+      ? 'Vientovis — ' + meta.nombre + ' (' + meta.anio + ')'
+      : 'El impacto de los huracanes más relevantes de los últimos años';
+    this._montarPantallaPrincipal(dest.id, token);
   },
 
-  _marcarNav(vista) {
-    document.querySelectorAll('.nav-enlace').forEach(a => {
-      a.classList.toggle('activo', a.getAttribute('data-nav') === vista);
-    });
+  /* Detener playback + sonido de la tormenta activa: lo llama el routing al
+   * salir y el selector al cambiar de huracán. */
+  _pararPlayback() {
+    const previa = this._estado;
+    if (!previa) return;
+    if (previa.raf) cancelAnimationFrame(previa.raf);
+    previa.raf = null;
+    previa.reproducido = false;
+    previa.ultimoTs = null;
+    this._conAudio('setReproduciendo', false);
   },
 
-  /* limpieza del estado de la vista anterior */
+  /* limpieza del estado de la tormenta montada: los listeners registrados con
+   * _al mueren aquí y el mapa se remueve ANTES de vaciar su contenedor, así
+   * re-entrar a la ruta no dispara «Map container is already initialized». */
   _desmontar() {
     this._limpieza.forEach(fn => { try { fn(); } catch (e) { /* noop */ } });
     this._limpieza = [];
-    if (this._estado) {
-      if (this._estado.raf) cancelAnimationFrame(this._estado.raf);
+    if (this._estado && this._estado.raf) {
+      cancelAnimationFrame(this._estado.raf);
+      this._estado.raf = null;
     }
     this._estado = null;
-    if (this._mapa) { this._mapa.destruir(); this._mapa = null; }
-    this._destruirMinis();
-    this._paneles = null;
     if (this._mapa) { this._mapa.destruir(); this._mapa = null; }
     this._paneles = null;
     const tip = document.getElementById('tooltip');
@@ -109,15 +115,6 @@ const App = {
     this._limpieza.push(() => window.removeEventListener(ev, fn));
   },
 
-  /* Mini-mapas Leaflet de la galería (C2): los de la vista anterior se
-   * removieron AL desmontar (map.remove()), así que re-entrar a la ruta no
-   * dispara «Map container is already initialized». */
-  _destruirMinis() {
-    if (!this._minis) return;
-    this._minis.forEach(m => { try { m.destruir(); } catch (e) { /* noop */ } });
-    this._minis = null;
-  },
-
   /* ===================== helpers de audio ===================== */
 
   _conAudio(metodo) {
@@ -126,100 +123,115 @@ const App = {
     catch (err) { console.warn('[vientovis] audio omitido (' + metodo + '):', err); }
   },
 
-  /* ===================== VISTA GALERÍA ===================== */
+  /* ===================== notas de tocatierra ===================== */
 
-  async _vistaGaleria(token) {
+  /* data/notas-tocatierras.json (un archivo para todas las tormentas) con
+   * caché simple en memoria: una única carga por sesión. Si el fetch falla se
+   * cachea el fallo y la vista sigue igual, sin notas. */
+  _cargarNotas() {
+    if (!this._notasPromesa) {
+      this._notasPromesa = fetch('data/notas-tocatierras.json')
+        .then(resp => (resp.ok ? resp.json() : {}))
+        .catch(err => {
+          console.warn('[vientovis] notas de tocatierra no disponibles:', err);
+          return {};
+        });
+    }
+    return this._notasPromesa;
+  },
+
+  /* ===================== PANTALLA PRINCIPAL ===================== */
+
+  async _montarPantallaPrincipal(id, token) {
     const main = document.getElementById('vista');
-    try { this._estado = { tipo: 'galeria' }; await this._esperaRuta(token); } catch (e) { return; }
-
-    const orden = Datos.ordenPorMuertes();
-    const n = orden.length;
-    const k = Math.min(3, n);
-    const top = orden.slice(0, k);
-    const totalMuertes = orden.reduce((s, t) => s + (+t.muertes_total || 0), 0);
+    const frase = Datos.frasePotenciaImpacto(); // computada del índice en runtime
 
     main.innerHTML =
-      '<section class="galeria">' +
-      '<div class="galeria-cabecera">' +
-      '<h1 class="galeria-titulo">El impacto de los huracanes más relevantes de los últimos años</h1>' +
-      '<p class="galeria-lede">Los daños ocasionados por los huracanes más relevantes de la actualidad, medidos según la cantidad de víctimas, la destrucción de propiedades y sus costos, para dar mayor claridad sobre su impacto en las zonas a largo plazo.</p>' +
-      '<div class="cinta" id="cinta" role="img" aria-label="Concentración de muertes por tormenta"></div>' +
-      '<p class="cinta-caption mono">Cada segmento es una tormenta, en el mismo orden que la galería; su ancho, sus muertes. ' +
-      'La trayectoria de cada ficha se colorea por categoría Saffir–Simpson:</p>' +
-      '<div class="chips-categorias" id="chips-categorias"></div>' +
+      '<section class="inicio">' +
+      '<div class="hero">' +
+      '<h1 class="hero-titulo">El impacto de los huracanes <em>más relevantes</em> de los últimos años</h1>' +
+      '<div class="hero-lateral">' +
+      '<p class="hero-lede">Los daños ocasionados por los huracanes más relevantes de la actualidad, medidos según la cantidad de víctimas, la destrucción de propiedades y sus costos, para dar mayor claridad sobre su impacto en las zonas a largo plazo.</p>' +
+      '<p class="hero-frase" id="hero-frase"></p>' +
       '</div>' +
-      '<ol class="galeria-grid" id="galeria-grid" style="list-style:none"></ol>' +
-      /* atribución única (C2): NUNCA se repite en los 10 mini-mapas */
-      '<p class="galeria-atr mono">Mini-mapas de las fichas: imágenes satelitales &copy; Esri — Esri, Maxar, Earthstar Geographics.</p>' +
+      '</div>' +
+      '<nav class="selec" aria-label="Huracanes, ordenados por muertes">' +
+      '<p class="selec-etiqueta mono">Orden por <b>muertes, no por potencia</b> · elige un huracán' +
+      '<span class="selec-clave mono"><i aria-hidden="true"></i>barra: muertes relativas</span></p>' +
+      '<ol class="selec-lista" id="selec-lista"></ol>' +
+      '</nav>' +
+      '<div class="tor-raiz" id="tor-raiz"></div>' +
       '</section>';
 
-    /* leyenda de categoría (1 sola vez aquí) */
-    const chips = document.getElementById('chips-categorias');
-    chips.innerHTML =
-      '<span class="chip chip-neutro">T. tropical</span>' +
-      [1, 2, 3, 4, 5].map(c => '<span class="chip chip-cat-' + c + '">Cat ' + c + '</span>').join('');
+    /* frase editorial: textContent (nada se inyecta tal cual) */
+    const elFrase = document.getElementById('hero-frase');
+    if (elFrase) elFrase.textContent = frase ||
+      'La potencia no predice el impacto: en esta selección, las muertes y la categoría máxima no siempre van de la mano.';
 
-    /* cinta de concentración (segmentos = muertes) */
-    const cinta = document.getElementById('cinta');
-    cinta.innerHTML = orden.map(t => {
-      const pct = totalMuertes ? ((+t.muertes_total || 0) / totalMuertes) * 100 : 0;
-      return '<span class="cinta-seg' + (top.indexOf(t) >= 0 ? ' cinta-top' : '') + '" ' +
-        'style="width:' + pct + '%;background:' + Datos.colorCat(t.cat_pico) + '" ' +
-        'title="' + t.nombre + ' ' + t.anio + ' · ' + Datos.fmtEntero(t.muertes_total) + ' muertes">' +
-        '</span>';
+    this._pintaSelector(id);
+    await this._montarTormenta(id, document.getElementById('tor-raiz'), token);
+  },
+
+  /* Fichas del selector: ordenadas por MUERTES descendente (el impacto manda);
+   * el chip de categoría es discreto y la barra codifica muertes relativas
+   * (NUNCA la categoría), así los desbalances potencia/impacto se ven solos. */
+  _pintaSelector(idActivo) {
+    const ol = document.getElementById('selec-lista');
+    if (!ol) return;
+    const orden = Datos.ordenPorMuertes();
+    const maxMuertes = orden.reduce((m, t) => Math.max(m, +t.muertes_total || 0), 1);
+
+    ol.innerHTML = orden.map((t, i) => {
+      const activo = t.id === idActivo;
+      const pct = Math.round(((+t.muertes_total || 0) / maxMuertes) * 100);
+      return '<li class="selec-item"><button type="button" class="selec-tarjeta' + (activo ? ' activo' : '') + '"' +
+        ' data-id="' + t.id + '"' + (activo ? ' aria-current="true"' : '') +
+        ' title="' + t.nombre + ' ' + t.anio + ' · Cat ' + t.cat_pico + ' · ' +
+        Datos.fmtEntero(t.muertes_total) + ' muertes · ' + Datos.fmtUSDCorto(t.danos_total_usd) + ' en daños">' +
+        '<span class="selec-sup"><span class="selec-rango mono">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span class="selec-nombre">' + t.nombre + '</span>' +
+        '<span class="selec-anio mono">' + t.anio + '</span></span>' +
+        '<span class="selec-medias"><span class="chip chip-mini chip-cat-' + t.cat_pico + '">Cat ' + t.cat_pico + '</span>' +
+        '<span class="selec-muertes">' + Datos.fmtEntero(t.muertes_total) + '<span class="selec-unidad">muertes</span></span></span>' +
+        '<span class="selec-colas"><span class="selec-danos">' + Datos.fmtUSDCorto(t.danos_total_usd) +
+        '<span class="selec-unidad">daños</span></span></span>' +
+        '<span class="selec-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' +
+        '</button></li>';
     }).join('');
 
-    /* fichas (cargamos los 10 archivos para dibujar las trayectorias) */
-    const grid = document.getElementById('galeria-grid');
-    try {
-      const detalles = await Promise.all(orden.map(t => Datos.tormenta(t.id).catch(() => null)));
-      if (!(await this._esperaRuta(token))) return;
+    ol.querySelectorAll('.selec-tarjeta').forEach(b => {
+      b.addEventListener('click', () => this.seleccionarTormenta(b.getAttribute('data-id')));
+    });
+  },
 
-      grid.innerHTML = orden.map((t, i) => {
-        const tor = detalles[i];
-        const hayDatos = !!(tor && tor.puntos && tor.puntos.length > 1);
-        const mini = hayDatos
-          ? '<div class="mini-mapa" id="mini-' + t.id + '" role="img" aria-label="Mapa satelital · trayectoria de ' + t.nombre + ' (' + t.anio + ')"></div>'
-          : '';
-        const esTop = i < 3;
-        return '<li class="ficha"><a class="ficha-enlace" href="#tormenta/' + t.id + '" ' +
-          'aria-label="' + t.nombre + ' ' + t.anio + ' · Cat ' + t.cat_pico + ' · ' +
-          Datos.fmtEntero(t.muertes_total) + ' muertes">' +
-          '<div class="ficha-mini">' + (mini || '<div class="mini-vacio"></div>') +
-          '<span class="ficha-rango mono' + (esTop ? ' impacto' : '') + '">Nº ' + Datos.fmtEntero(i + 1).padStart(2, '0') + (esTop ? ' · impacto' : '') + '</span></div>' +
-          '<div class="ficha-cuerpo">' +
-          '<h3 class="ficha-nombre">' + t.nombre + ' <span class="ficha-anio">' + t.anio + '</span></h3>' +
-          '<div class="ficha-chips"><span class="chip chip-cat-' + t.cat_pico + '">Cat ' + t.cat_pico + '</span></div>' +
-          '<dl class="ficha-stats">' +
-          '<div><dt>Muertes</dt><dd>' + Datos.fmtEntero(t.muertes_total) + '</dd></div>' +
-          '<div><dt>Daños</dt><dd>' + Datos.fmtUSDCorto(t.danos_total_usd) + '</dd></div>' +
-          '</dl></div></a></li>';
-      }).join('');
+  /* cambiar de huracán desde el selector: sin recarga del documento ni
+   * entrada al historial (replaceState), solo re-render de la vista */
+  async seleccionarTormenta(id) {
+    const meta = Datos.porId(id);
+    if (!meta || !this._raizTormenta) return;
+    if (this._estado && this._estado.id === id) return;
+    this._pararPlayback();
+    this._desmontar();
+    const token = ++this._token;
+    try { history.replaceState(null, '', '#tormenta/' + id); } catch (e) { /* file:// etc */ }
+    document.title = 'Vientovis — ' + meta.nombre + ' (' + meta.anio + ')';
+    this._marcarSelector(id);
+    await this._montarTormenta(id, this._raizTormenta, token);
+  },
 
-      /* C2: los 10 mini-mapas Leaflet REALES (teselas satelitales), creados al
-       * montar la galería. Los anteriores siempre murieron en _desmontar()
-       * (map.remove()), así que este montaje nunca choca con un contenedor
-       * ya inicializado. */
-      this._destruirMinis();
-      this._minis = [];
-      orden.forEach((t, i) => {
-        const tor = detalles[i];
-        if (!tor || !tor.puntos || tor.puntos.length < 2) return;
-        const div = document.getElementById('mini-' + t.id);
-        if (div) this._minis.push(MapaTormenta.crearMini(div, tor.puntos));
-      });
-      /* los minis son non-interactive (trackResize:false): el re-fit es nuestro */
-      this._al('resize', (() => {
-        let retardo;
-        return () => {
-          clearTimeout(retardo);
-          retardo = setTimeout(() => {
-            if (this._minis) this._minis.forEach(m => m.reencuadrar());
-          }, 200);
-        };
-      })());
-    } catch (e) {
-      grid.innerHTML = '<li class="mono carga-error">No se pudieron cargar las fichas.</li>';
+  /* estado activo del selector (tarjeta + aria-current; en la tira con
+   * desbordamiento de móvil, centra la tarjeta activa) */
+  _marcarSelector(id) {
+    document.querySelectorAll('.selec-tarjeta').forEach(b => {
+      const activo = b.getAttribute('data-id') === id;
+      b.classList.toggle('activo', activo);
+      if (activo) b.setAttribute('aria-current', 'true');
+      else b.removeAttribute('aria-current');
+    });
+    const lista = document.getElementById('selec-lista');
+    const activa = lista ? lista.querySelector('.selec-tarjeta.activo') : null;
+    if (activa && lista.scrollWidth > lista.clientWidth + 2) {
+      try { activa.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch (e) { /* noop */ }
     }
   },
 
@@ -229,18 +241,21 @@ const App = {
     return token === this._token;
   },
 
-  /* ===================== VISTA TORMENTA ===================== */
+  /* ===================== VISTA TORMENTA (se monta en la portada) ===================== */
 
-  async _vistaTormenta(id, token) {
+  async _montarTormenta(id, raiz, token) {
     const meta = Datos.porId(id);
-    if (!meta) { location.replace('#galeria'); return; }
-    const main = document.getElementById('vista');
-    main.innerHTML = '<p class="cargando mono">Cargando ' + meta.nombre + '…</p>';
-    let tor;
+    this._raizTormenta = raiz || null;
+    if (!meta || !raiz) return;
+    raiz.innerHTML = '<p class="cargando mono">Cargando ' + meta.nombre + '…</p>';
+    let tor, notasTodas;
     try {
-      tor = await Datos.tormenta(id);
+      /* las notas de tocatierra (archivo único, cacheado) viajan en paralelo
+       * con la tormenta; su carga nunca lanza: sin archivo o sin id para la
+       * tormenta se sigue sin notas */
+      [tor, notasTodas] = await Promise.all([Datos.tormenta(id), this._cargarNotas()]);
     } catch (err) {
-      main.innerHTML = '<section class="carga-error"><h1>No se pudo cargar la tormenta</h1><p class="mono">' + (err.message || err) + '</p></section>';
+      raiz.innerHTML = '<section class="carga-error"><h1>No se pudo cargar la tormenta</h1><p class="mono">' + (err.message || err) + '</p></section>';
       return;
     }
     if (!(await this._esperaRuta(token))) return;
@@ -248,20 +263,24 @@ const App = {
     const puntos = tor.puntos;
     const tocas = Datos.puntosTocatierra(puntos);
     const tramosIR = Datos.tramosIR(puntos);
-    const pico = Datos.pico(puntos);
     const s = this._estado = {
-      tipo: 'tormenta', id: id, meta: meta, puntos: puntos,
-      iActivo: 0, reproducido: false, vel: 0.5, fichaAbierta: false,
+      id: id, meta: meta, puntos: puntos,
+      notas: (notasTodas && notasTodas[id]) || [], // notas de tocatierra: paneles (eje X) y ticker
+      iActivo: 0, reproducido: false, vel: 0.25, // ×0,25 FIJO (sin selector): 6 h ≈ 2 s
+      fichaAbierta: false,
       simT: +puntos[0].d, raf: null, ultimoTs: null, tooltipAnclado: false,
       z: { modo: null } // coreografía de zoom (C4): 'inicio'|'seguir' (sin zoom profundo)
     };
+    /* ticker narrativo: línea de inicio + sucesos derivados de los puntos,
+     * calculados UNA vez al montar la tormenta */
+    s.lineaInicio = this._lineaInicioSucesos(s);
+    s.sucesos = this._construirSucesos(s);
 
-    main.innerHTML =
+    raiz.innerHTML =
       '<section class="tormenta">' +
       '<div class="tormenta-cabecera">' +
-      '<a class="tormenta-volver" href="#galeria">← Huracanes</a>' +
-      '<h1 class="tormenta-titulo">' + meta.nombre + ' <span class="tormenta-anio">' + meta.anio + '</span></h1>' +
-      '<span class="chip chip-cat-' + meta.cat_pico + '">Cat ' + meta.cat_pico + '</span>' +
+      '<h2 class="tormenta-titulo">' + meta.nombre + ' <span class="tormenta-anio">' + meta.anio + '</span></h2>' +
+      '<span class="chip chip-intensidad chip-cat-' + meta.cat_pico + '">Cat ' + meta.cat_pico + '</span>' +
       '<div class="tormenta-stats mono">' +
       '<span class="ts-item"><b>' + Datos.fmtEntero(meta.muertes_total) + '</b> muertes</span>' +
       '<span class="ts-item"><b>' + Datos.fmtUSDCorto(meta.danos_total_usd) + '</b> daños</span>' +
@@ -271,13 +290,8 @@ const App = {
       '</div>' +
       /* reproductor: barra superior de la vista tormenta (por encima del mapa y los paneles) */
       '<div class="reproductor" id="reproductor">' +
-      '<button type="button" id="btn-play" class="btn btn-primario" aria-label="Reproducir la tormenta">Reproducir</button>' +
-      '<div class="velocidades" role="group" aria-label="Velocidad de reproducción">' +
-      '<button type="button" class="vel" data-vel="0.25" aria-pressed="false">0,25×</button>' +
-      '<button type="button" class="vel activo" data-vel="0.5" aria-pressed="true">0,5×</button>' +
-      '</div>' +
-      '<input type="range" id="scrubber" class="scrubber" min="0" max="' + (puntos.length - 1) + '" step="1" value="0" aria-label="Línea de tiempo de la tormenta" aria-valuemin="0" aria-valuemax="' + (puntos.length - 1) + '">' +
-      '<span class="reloj" id="reloj">' + Datos.fmtReloj(puntos[0].d) + '</span>' +
+      '<button type="button" id="btn-play" class="btn btn-primario" aria-label="Reproducir la tormenta · ×0,25 (6 h ≈ 2 s)">Reproducir</button>' +
+      '<input type="range" id="scrubber" class="scrubber" min="0" max="' + (puntos.length - 1) + '" step="1" value="0" aria-label="Línea de tiempo de la tormenta · ×0,25 (6 h ≈ 2 s)" aria-valuemin="0" aria-valuemax="' + (puntos.length - 1) + '">' +
       '<div class="audio-grupo">' +
       '<button type="button" id="btn-audio" class="btn">Activar sonido</button>' +
       '<div class="audio-extra oculto" id="audio-extra">' +
@@ -288,6 +302,7 @@ const App = {
       '</div>' +
       '<div class="tormenta-cuerpo">' +
       '<div class="tormenta-mapa" id="tor-mapa">' +
+      '<div class="reloj-mapa" id="reloj-mapa" role="group" aria-label="Fecha y hora UTC del punto activo">' + Datos.fmtReloj(puntos[0].d) + '</div>' +
       '<div class="contador-impacto" id="contador-impacto" role="group" aria-label="Acumulados del punto activo">' +
       '<div class="ci-fila"><span class="ci-etq">Muertes:</span><span class="ci-cifra ci-muertes" id="ci-muertes">—</span></div>' +
       '<div class="ci-fila"><span class="ci-etq">Daños:</span><span class="ci-cifra ci-danos" id="ci-danos">—</span></div>' +
@@ -295,6 +310,13 @@ const App = {
       '<div class="leyenda-categorias" aria-label="Leyenda de categoría Saffir–Simpson">' +
       '<span class="li"><span class="cuadr" style="background:' + Datos.colorCat(0) + '"></span>T.T./TD</span>' +
       [1, 2, 3, 4, 5].map(c => '<span class="li"><span class="cuadr" style="background:' + Datos.colorCat(c) + '"></span>' + c + '</span>').join('') +
+      '</div>' +
+      /* barra de noticias de TV al pie del mapa: último SUCESO narrativo del
+       * huracán con índice ≤ el punto activo (misma vía que contador/reloj-mapa:
+       * _actualizarPunto) */
+      '<div class="ticker-noticias" id="ticker" role="group" aria-label="Última actualización del huracán">' +
+      '<span class="ticker-chip mono"><i class="ticker-punto" aria-hidden="true"></i>En vivo</span>' +
+      '<span class="ticker-cuerpo"><span class="ticker-texto" id="ticker-texto"></span></span>' +
       '</div>' +
       '<div class="ficha-flotante oculto" id="ficha" role="group" aria-label="Ficha del punto activo">' +
       '<div class="ficha-cab"><h3 class="ficha-titulo">Ficha del punto</h3>' +
@@ -306,13 +328,12 @@ const App = {
       '</div>' +
       '</section>';
 
-    document.title = 'Vientovis — ' + meta.nombre + ' (' + meta.anio + ')';
-
     /* --- paneles + mapa --- */
     const colMapa = document.getElementById('tor-mapa');
     const colPaneles = document.getElementById('tor-paneles');
     this._paneles = Paneles.crearPanelTormenta(colPaneles, {
       puntos: puntos,
+      notas: s.notas,
       alHover: (i, ev) => this._setHover(i, ev),
       alSalida: () => this._salidaHover(),
       alFija: i => this._alFijar(i)
@@ -320,16 +341,22 @@ const App = {
 
     this._mapa = MapaTormenta.crear(colMapa, {
       puntos: puntos,
+      notas: (notasTodas && notasTodas[id]) || [], // notas de tocatierra de esta tormenta
       alPasarPorEncima: (i, ev) => this._setHover(i, ev),
       alSalirDelHover: () => this._salidaHover(),
       alHacerClicEnPunto: i => this._alClicPunto(i)
     });
 
+    /* Altura del mapa: relativa al viewport (encoge en portátiles bajos para
+     * que la visualización quepa en una pantalla) y acotada por la columna de
+     * paneles: sus alturas SVG son fijas (paneles.js), así que un mapa más
+     * bajo que ellos dejaría un vacío a la izquierda. */
     const fijaAltura = () => {
-      if (!this._estado || this._estado.tipo !== 'tormenta') return;
+      if (!this._estado) return;
       if (window.innerWidth >= 1024) {
-        const h = Math.max(430, colPaneles.offsetHeight || 600);
-        colMapa.style.height = h + 'px';
+        const porVista = Math.max(340, Math.min(700, Math.round((window.innerHeight || 900) * 0.9)));
+        const porPaneles = Math.max(430, colPaneles.offsetHeight || 600);
+        colMapa.style.height = Math.min(porVista, porPaneles) + 'px';
       } else {
         colMapa.style.height = '430px';
       }
@@ -344,17 +371,16 @@ const App = {
     this._al('resize', (() => {
       let t; return () => {
         clearTimeout(t);
-        t = setTimeout(() => { fijaAltura(); if (this._estado && this._estado.tipo === 'tormenta') { this._paneles = Paneles.crearPanelTormenta(colPaneles, { puntos: puntos, alHover: (i, ev) => this._setHover(i, ev), alSalida: () => this._salidaHover(), alFija: i => this._alFijar(i) }); this._paneles.setActivo(s.iActivo); } }, 160);
+        t = setTimeout(() => { fijaAltura(); if (this._estado) { this._paneles = Paneles.crearPanelTormenta(colPaneles, { puntos: puntos, notas: s.notas, alHover: (i, ev) => this._setHover(i, ev), alSalida: () => this._salidaHover(), alFija: i => this._alFijar(i) }); this._paneles.setActivo(s.iActivo); } }, 160);
       };
     })());
 
     /* --- reproductor --- */
     const btnPlay = document.getElementById('btn-play');
     const scrubber = document.getElementById('scrubber');
-    const reloj = document.getElementById('reloj');
     const repValores = document.getElementById('rep-valores');
 
-    this._refs = { btnPlay: btnPlay, scrubber: scrubber, reloj: reloj, repValores: repValores, ficha: document.getElementById('ficha'), fichaCuerpo: document.getElementById('ficha-cuerpo'), ciMuertes: document.getElementById('ci-muertes'), ciDanos: document.getElementById('ci-danos') };
+    this._refs = { btnPlay: btnPlay, scrubber: scrubber, repValores: repValores, relojMapa: document.getElementById('reloj-mapa'), tickerTexto: document.getElementById('ticker-texto'), ficha: document.getElementById('ficha'), fichaCuerpo: document.getElementById('ficha-cuerpo'), ciMuertes: document.getElementById('ci-muertes'), ciDanos: document.getElementById('ci-danos') };
 
     btnPlay.addEventListener('click', () => s.reproducido ? this._pausar() : this._reproducir());
     scrubber.addEventListener('pointerdown', () => { if (s.reproducido) this._pausar(); });
@@ -365,18 +391,6 @@ const App = {
       this._setActivo(destino);
     });
     this._al('keydown', ev => { if (ev.key === 'Escape') this._cerrarFicha(); });
-    document.querySelectorAll('.vel').forEach(b => {
-      b.addEventListener('click', () => {
-        const v = +b.dataset.vel;
-        if (!v) return;
-        s.vel = v;
-        document.querySelectorAll('.vel').forEach(x => {
-          const act = +x.dataset.vel === v;
-          x.classList.toggle('activo', act);
-          x.setAttribute('aria-pressed', String(act));
-        });
-      });
-    });
 
     /* --- ficha --- */
     document.getElementById('btn-cerrar-ficha').addEventListener('click', () => this._cerrarFicha());
@@ -457,40 +471,68 @@ const App = {
 
   _reproducir() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     const n = s.puntos.length;
     if (s.iActivo >= n - 1) this._setActivo(0);
+    /* SOLO al pulsar Reproducir: deja la visualización completa en pantalla
+     * (si ya lo está, sin scroll) antes de arrancar la animación */
+    this._scrollAVista();
     s.reproducido = true;
     s.ultimoTs = null;
     s.simT = +s.puntos[s.iActivo].d;
     const btn = document.getElementById('btn-play');
-    if (btn) { btn.textContent = 'Pausar'; btn.setAttribute('aria-label', 'Pausar la reproducción'); }
+    if (btn) {
+      btn.textContent = 'Pausar';
+      btn.setAttribute('aria-label', 'Pausar la reproducción · ×0,25 (6 h ≈ 2 s)');
+      btn.classList.add('reproduciendo'); // CSS: estado pause neutro, sin sub-pulso
+    }
     this._seguroTooltipOcultar();
     this._conAudio('setReproduciendo', true);
     this._coreoInicio(); // C4: zoom de arranque y, desde ahí, seguimiento del punto activo
+    /* Arranque instantáneo: el rAF se agenda aquí mismo, sin setTimeout ni
+     * esperas; la coreografía de zoom corre EN PARALELO dentro del mapa y el
+     * primer _tick ya avanza reloj/marcador aunque el flyTo siga en curso. */
     s.raf = requestAnimationFrame(ts => this._tick(ts));
+  },
+
+  /* Scroll al nivel de la visualización (.tormenta) al pulsar Reproducir:
+   * solo si la sección no está YA completa en pantalla; suave, salvo con
+   * prefers-reduced-motion (instantáneo). El snap de la sección la centra. */
+  _scrollAVista() {
+    const sec = document.querySelector('.tormenta');
+    if (!sec) return;
+    const r = sec.getBoundingClientRect();
+    const alto = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (r.top >= -2 && r.bottom <= alto + 2) return; // ya visible del todo
+    const reduce = typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { sec.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); } catch (e) { /* noop */ }
   },
 
   _pausar() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     if (s.raf) { cancelAnimationFrame(s.raf); s.raf = null; }
     s.reproducido = false;
     s.ultimoTs = null;
     const btn = document.getElementById('btn-play');
-    if (btn) { btn.textContent = 'Reproducir'; btn.setAttribute('aria-label', 'Reproducir la tormenta'); }
+    if (btn) {
+      btn.textContent = 'Reproducir';
+      btn.setAttribute('aria-label', 'Reproducir la tormenta · ×0,25 (6 h ≈ 2 s)');
+      btn.classList.remove('reproduciendo');
+    }
     this._conAudio('setReproduciendo', false);
     this._setActivo(s.iActivo, true); // re-aplica el crosshair al punto activo (sin audio)
   },
 
   _tick(ts) {
     const s = this._estado;
-    if (!s || !s.reproducido || s.tipo !== 'tormenta') return;
+    if (!s || !s.reproducido) return;
     const n = s.puntos.length;
     const dt = s.ultimoTs == null ? 16.7 : Math.min(150, ts - s.ultimoTs);
     s.ultimoTs = ts;
-    /* 0,5× = un paso de 6 h (21 600 000 ms de tormenta) en 1 s real;
-     * 0,25× avanza la mitad por milisegundo (un punto cada 2 s) */
+    /* ×0,25 FIJO (sin selector): un paso de 6 h de tormenta (21 600 000 ms)
+     * cada 2 s reales, la mitad del paso-base de 0,5× (6 h por segundo) */
     s.simT += dt * (s.vel / 0.5) * (21600000 / 1000);
 
     const iPrevio = s.iActivo;
@@ -527,7 +569,7 @@ const App = {
 
   _setActivo(i, sinAudio) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     const puntos = s.puntos;
     s.iActivo = Math.max(0, Math.min(puntos.length - 1, i));
     s.simT = +puntos[s.iActivo].d;
@@ -538,7 +580,6 @@ const App = {
     const p = puntos[s.iActivo];
     const ant = s.iActivo > 0 ? puntos[s.iActivo - 1] : null;
     const refs = this._refs || {};
-    if (refs.reloj) refs.reloj.textContent = Datos.fmtReloj(p.d);
     if (refs.scrubber) {
       refs.scrubber.value = String(s.iActivo);
       const pct = puntos.length > 1 ? s.iActivo / (puntos.length - 1) * 100 : 0;
@@ -552,36 +593,203 @@ const App = {
     if (!sinAudio) this._conAudio('actualizar', p, ant);
   },
 
-  /* Marcador del mapa + contador de acumulados: SIEMPRE por la misma vía
-   * (playback, scrub, hover, ficha) para que nunca se desincronicen. */
+  /* Marcador del mapa + contador de acumulados + reloj UTC + ticker: SIEMPRE
+   * por la misma vía (playback, scrub, hover, ficha) para que nunca se
+   * desincronicen. */
   _actualizarPunto(i) {
     if (this._mapa) this._mapa.setPuntoActivo(i);
     this._pintarContador(i);
+    this._pintarRelojMapa(i);
+    this._pintarTicker(i);
+  },
+
+  /* Fecha/hora UTC del punto activo en el overlay superior izquierdo del mapa
+   * (mismo vidrio que el contador); durante el playback la interpola _setInterp. */
+  _pintarRelojMapa(i) {
+    const s = this._estado;
+    if (!s || !this._refs || !this._refs.relojMapa) return;
+    const p = s.puntos[i];
+    if (p) this._refs.relojMapa.textContent = Datos.fmtReloj(p.d);
   },
 
   /* Acumulados del punto activo en el overlay superior derecho del mapa
    * (formatos es-ES ya existentes: 1.004 muertes · $33,6 mil M USD). */
   _pintarContador(i) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta' || !this._refs) return;
+    if (!s || !this._refs) return;
     const p = s.puntos[i];
     if (!p) return;
     if (this._refs.ciMuertes) this._refs.ciMuertes.textContent = Datos.fmtEntero(p.muertes_acum);
     if (this._refs.ciDanos) this._refs.ciDanos.textContent = Datos.fmtUSD(p.danos_acum_usd);
   },
 
+  /* ============ ticker narrativo: sucesos del huracán ============ */
+
+  /* Sucesos narrativos de la tormenta: UNA lista calculada al montar (derivada
+   * de s.puntos, EN ORDEN): (a) transiciones de estatus/categoría, (b)
+   * tocatierras (nota 1:1 de data/notas-tocatierras.json o aviso genérico),
+   * (c) pico de intensidad (único, notable y sin repetir la categoría que una
+   * intensificación contigua acaba de anunciar) y (d) cierre con los totales.
+   * Como máximo un suceso por índice: en puntos contiguos nunca se solapa
+   * contenido (los sucesos se derivan de TRANSICIONES, no de cada punto). */
+  _construirSucesos(s) {
+    const puntos = s.puntos;
+    const n = puntos.length;
+    const nombre = s.meta.nombre;
+    const eventos = new Map(); // índice de punto → {texto, tipo, cat}
+    const catTxt = c => Datos.fmtCatCorto(Math.max(0, Math.min(5, c | 0)));
+    const pon = (i, texto, tipo, cat) => { eventos.set(i, { texto: texto, tipo: tipo, cat: cat }); };
+
+    /* (a) transiciones de estatus/categoría: una por CAMBIO, nunca por punto */
+    for (let i = 1; i < n; i++) {
+      const a = puntos[i - 1], b = puntos[i];
+      const estA = a.estatus, estB = b.estatus;
+      const catA = Math.max(0, a.cat_ss | 0), catB = Math.max(0, b.cat_ss | 0);
+      if (estA === estB && catA === catB) continue;
+      let texto = null;
+      let tipo = 'trans';
+      if (estB === 'TD') {
+        /* vuelta a depresión desde TS/HU → se degrada; organización desde un
+         * sistema no tropical (EX/WV/DB) → se organizan (formación) */
+        texto = (estA === 'TS' || estA === 'HU')
+          ? nombre + ' se degrada a depresión tropical'
+          : 'se organizan como depresión tropical';
+      } else if (estB === 'TS') {
+        texto = (estA === 'HU')
+          ? nombre + ' decae a tormenta tropical'
+          : nombre + ' avanza como tormenta tropical';
+      } else if (estB === 'HU') {
+        if (estA === 'HU') {
+          tipo = catB > catA ? 'intensifica' : 'decae';
+          texto = nombre + (catB > catA ? ' se intensifica a ' : ' decae a ') + catTxt(catB);
+        } else {
+          tipo = 'intensifica';
+          texto = nombre + ' eleva su estado a ' + catTxt(catB) + ' y se vuelve huracán';
+        }
+      } else if (estB === 'EX' || estB === 'LO') {
+        if (estA === 'EX' || estA === 'LO') continue; // ya postropical: sin suceso
+        texto = nombre + (estB === 'EX' ? ' se vuelve post-tropical' : ' pierde características tropicales');
+      } else {
+        /* DB/WV/otros: sistema no tropical en disipación */
+        if (estA === 'EX' || estA === 'LO' || estA === 'DB' || estA === 'WV') continue;
+        texto = nombre + ' pierde características tropicales';
+      }
+      if (texto) pon(i, texto, tipo, catB);
+    }
+
+    /* (b) tocatierras: cada nota se empareja 1:1 con su tocatierra más cercano
+     * (±2 h, mismo criterio que mapa y paneles); sin nota, aviso genérico que
+     * nunca pisa un suceso más relevante del mismo punto */
+    const notas = this._normalizarNotasToca(s.notas);
+    const UMBRAL_NOTA_MS = 2 * 3600 * 1000;
+    const conNota = new Map(); // índice → nota
+    notas.forEach(nota => {
+      let mejor = -1, mejorDist = Infinity;
+      puntos.forEach((p, i) => {
+        if (!p.tocatierra) return;
+        const dist = Math.abs(+p.d - nota.tMs);
+        if (dist < mejorDist) { mejorDist = dist; mejor = i; }
+      });
+      if (mejor >= 0 && mejorDist <= UMBRAL_NOTA_MS) conNota.set(mejor, nota);
+    });
+    puntos.forEach((p, i) => {
+      if (!p.tocatierra) return;
+      const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
+      const nota = conNota.get(i);
+      if (nota) {
+        pon(i, 'toca tierra en ' + nota.lugar + ' (' + catTxt(cat) + '): ' + nota.nota, 'nota', cat);
+      } else if (!eventos.has(i)) {
+        pon(i, 'toca tierra como ' + Datos.fmtEstatus(p.estatus) + (cat >= 1 ? ' (' + catTxt(cat) + ')' : ''), 'toca', cat);
+      }
+    });
+
+    /* (c) pico de intensidad: un ÚNICO suceso, solo si el punto es notable
+     * (cat ≥ la de sus vecinos); si una intensificación CONTIGUA ya anunció
+     * esa misma categoría, el pico la deja obsoleta (dedupe: sin contenido
+     * repetido en puntos contiguos; el pico informa kt y cat). Nunca pisa una
+     * nota del mismo punto. */
+    const pico = Datos.pico(puntos);
+    if (pico) {
+      const ip = puntos.indexOf(pico);
+      const catP = Math.max(0, Math.min(5, pico.cat_ss | 0));
+      const catAnt = Math.max(0, Math.min(5, puntos[ip - 1].cat_ss | 0));
+      const catSig = Math.max(0, Math.min(5, puntos[ip + 1].cat_ss | 0));
+      const yaHay = eventos.get(ip);
+      if (ip > 0 && ip < n - 1 && catP >= catAnt && catP >= catSig && !(yaHay && yaHay.tipo === 'nota')) {
+        const vecino = eventos.get(ip - 1);
+        if (vecino && vecino.tipo === 'intensifica' && vecino.cat === catP) eventos.delete(ip - 1);
+        pon(ip, nombre + ' alcanza su pico: ' + pico.viento_kt + ' kt (' + catTxt(catP) + ')', 'pico', catP);
+      }
+    }
+
+    /* (d) cierre: totales del último punto, solo al llegar al final */
+    const fin = puntos[n - 1];
+    pon(n - 1, 'El paso de ' + nombre + ' ha provocado daños por ' + Datos.fmtUSD(fin.danos_acum_usd) +
+      ' y ' + Datos.fmtEntero(fin.muertes_acum) + ' muertes.', 'fin', 0);
+
+    /* en orden de índice y con la fecha/hora UTC delante (helpers de datos.js) */
+    return Array.from(eventos.keys()).sort((a, b) => a - b).map(i => ({
+      i: i,
+      tipo: eventos.get(i).tipo,
+      texto: Datos.fmtReloj(puntos[i].d) + ' — ' + eventos.get(i).texto
+    }));
+  },
+
+  /* Línea de inicio del ticker (antes del primer suceso): nombre, fecha y
+   * estado de formación del primer punto. */
+  _lineaInicioSucesos(s) {
+    const p = s.puntos[0];
+    const estado = p.estatus === 'TD' ? 'depresión tropical en formación'
+      : p.estatus === 'TS' ? 'tormenta tropical en formación'
+      : p.estatus === 'HU' ? 'huracán en seguimiento'
+      : 'sistema en seguimiento';
+    return s.meta.nombre + ' · ' + Datos.fmtReloj(p.d) + ' · ' + estado;
+  },
+
+  /* Normaliza data/notas-tocatierras.json (mismo formato de entrada que
+   * mapa.js/paneles.js) para emparejar notas con tocatierras en el ticker. */
+  _normalizarNotasToca(lista) {
+    return (Array.isArray(lista) ? lista : [])
+      .map(n => ({
+        tMs: +new Date(n.t),
+        lugar: String(n.lugar == null ? '' : n.lugar),
+        nota: String(n.nota == null ? '' : n.nota)
+      }))
+      .filter(n => Number.isFinite(n.tMs));
+  },
+
+  /* Última actualización del huracán en la barra de noticias al pie del mapa
+   * (TV): SIEMPRE el último SUCESO con índice ≤ el punto activo — persiste
+   * entre sucesos, el ticker ya no cambia punto a punto; antes del primer
+   * suceso muestra la línea de inicio. Un slide corto por cambio de texto
+   * (clase .entra; CSS, nunca marquee) y solo se repinta si el texto cambió
+   * (hover/pausa no re-animan). */
+  _pintarTicker(i) {
+    const s = this._estado;
+    const el = this._refs && this._refs.tickerTexto;
+    if (!s || !el) return;
+    let texto = s.lineaInicio || '';
+    const sucesos = s.sucesos || [];
+    for (let k = 0; k < sucesos.length && sucesos[k].i <= i; k++) texto = sucesos[k].texto;
+    if (el.textContent === texto) return;
+    el.textContent = texto;
+    el.classList.remove('entra');
+    void el.offsetWidth; // reinicia la animación de entrada (un slide por suceso)
+    el.classList.add('entra');
+  },
+
   _setInterp(i, frac) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     this._paneles && this._paneles.setInterp(i, frac);
     const p = s.puntos[i], q = s.puntos[i + 1];
     const tInterp = q ? +p.d + (+q.d - +p.d) * frac : +s.puntos[s.puntos.length - 1].d;
-    if (this._refs && this._refs.reloj) this._refs.reloj.textContent = Datos.fmtReloj(new Date(tInterp));
+    if (this._refs && this._refs.relojMapa) this._refs.relojMapa.textContent = Datos.fmtReloj(new Date(tInterp));
   },
 
   _setHover(i, ev) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta' || s.reproducido) return;
+    if (!s || s.reproducido) return;
     s.iHover = i;
     this._paneles && this._paneles.setHover(i);
     this._actualizarPunto(i);
@@ -591,7 +799,7 @@ const App = {
 
   _salidaHover() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta' || s.reproducido) return;
+    if (!s || s.reproducido) return;
     s.iHover = null;
     this._paneles && this._paneles.limpiarHover();
     if (this._mapa) this._mapa.setHover(null);
@@ -602,7 +810,7 @@ const App = {
   /* clic de scrub en los paneles */
   _alFijar(i) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     if (s.reproducido) this._pausar();
     this._salirDeCoreo();
     this._setActivo(i);
@@ -611,7 +819,7 @@ const App = {
   /* clic en un punto del mapa: scrub + ficha fijada */
   _alClicPunto(i) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     if (s.reproducido) this._pausar();
     this._salirDeCoreo();
     this._setActivo(i);
@@ -623,14 +831,14 @@ const App = {
    * Sin zoom profundo: TODOS los puntos (tocatierras incluidos) se siguen al
    * mismo nivel constante; s.z.modo solo recuerda si la cámara quedó fuera del
    * encuadre base (para que el scrub/click sepan cuándo reencuadrar).
-   * Las velocidades 0,25×/0,5× escalan el avance de datos, no las animaciones. */
+   * La velocidad fija ×0,25 escala el avance de datos, no las animaciones. */
 
   /* Zoom de arranque al pulsar Reproducir: zoom-in notable hacia el punto
    * actual (fitZoom+2, ~1 s). A partir de ahí NO hay retorno al panorama:
    * _coreoPorPunto acompaña el punto activo hasta el final. */
   _coreoInicio() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta' || !this._mapa || !this._mapa.zoomInicio) return;
+    if (!s || !this._mapa || !this._mapa.zoomInicio) return;
     s.z.modo = 'inicio';
     this._mapa.zoomInicio(s.iActivo);
   },
@@ -641,7 +849,7 @@ const App = {
    * reproducción o al hacer scrub. */
   _coreoPorPunto(i) {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta' || !s.reproducido) return; // solo playback automático
+    if (!s || !s.reproducido) return; // solo playback automático
     if (!this._mapa) return;
     if (!s.puntos[i]) return;
     s.z.modo = 'seguir';
@@ -653,7 +861,7 @@ const App = {
    * solo mueve el marcador, como hoy. */
   _salirDeCoreo() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     const enCoreo = s.z.modo !== null;
     s.z.modo = null;
     if (enCoreo && this._mapa && this._mapa.reencuadrar) this._mapa.reencuadrar();
@@ -687,7 +895,7 @@ const App = {
 
   _abrirFicha() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     s.fichaAbierta = true;
     if (this._refs && this._refs.ficha) this._refs.ficha.classList.remove('oculto');
     this._pintaFicha();
@@ -695,14 +903,14 @@ const App = {
 
   _cerrarFicha() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta') return;
+    if (!s) return;
     s.fichaAbierta = false;
     if (this._refs && this._refs.ficha) this._refs.ficha.classList.add('oculto');
   },
 
   _pintaFicha() {
     const s = this._estado;
-    if (!s || s.tipo !== 'tormenta' || !s.fichaAbierta || !this._refs) return;
+    if (!s || !s.fichaAbierta || !this._refs) return;
     const p = s.puntos[s.iActivo];
     const ant = s.iActivo > 0 ? s.puntos[s.iActivo - 1] : null;
     const meta = s.meta;
@@ -713,6 +921,9 @@ const App = {
     const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
     const chipCls = cat >= 1 ? 'chip chip-cat-' + cat : 'chip chip-neutro';
     const chipTxt = Datos.fmtCatCorto(cat);
+    /* nota de tocatierra emparejada (si el punto activo es un tocatierra
+     * explicado en data/notas-tocatierras.json), ya cargada por el mapa */
+    const notaToca = (this._mapa && this._mapa.notaDePunto) ? this._mapa.notaDePunto(s.iActivo) : null;
 
     this._refs.fichaCuerpo.innerHTML =
       '<p class="ficha-instante mono">' + Datos.fmtReloj(p.d) + '</p>' +
@@ -725,6 +936,9 @@ const App = {
       '<div><dt>Muertes acum.</dt><dd>' + Datos.fmtEntero(p.muertes_acum) + ' <span class="delta">(' + Datos.fmtDeltaEntero(dMuertes) + ')</span></dd></div>' +
       '<div><dt>Daños acum.</dt><dd>' + Datos.fmtUSD(p.danos_acum_usd) + ' <span class="delta">(' + Datos.fmtDeltaUSD(dDanos) + ')</span></dd></div>' +
       '</dl>' +
+      (notaToca
+        ? '<p class="ficha-nota"><span class="ficha-nota-cab mono">Tocatierra · ' + notaToca.lugar + '</span>' + notaToca.nota + '</p>'
+        : '') +
       '<hr class="ficha-sep">' +
       '<h4 class="ficha-resumen-titulo">Resumen · ' + meta.nombre + ' ' + meta.anio + '</h4>' +
       '<dl class="ficha-datos mono">' +
@@ -753,7 +967,9 @@ const App = {
 
   _htmlValores(p, ant) {
     const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
-    const chipCls = cat >= 1 ? 'chip chip-cat-' + cat : 'chip chip-neutro';
+    /* chip con fondo de intensidad y texto blanco (ver .rep-valores
+     * .chip-cat-* en css): SIEMPRE chip-cat-N, cat 0 incluida */
+    const chipCls = 'chip chip-cat-' + cat;
     const chipTxt = Datos.fmtCatCorto(cat);
     const dMu = ant ? p.muertes_acum - ant.muertes_acum : 0;
     const dDa = ant ? p.danos_acum_usd - ant.danos_acum_usd : 0;
@@ -763,68 +979,8 @@ const App = {
       '<span>Muertes <b>' + Datos.fmtEntero(p.muertes_acum) + '</b> (Δ ' + Datos.fmtDeltaEntero(dMu) + ')' +
       ' · Daños <b>' + Datos.fmtUSDCorto(p.danos_acum_usd) + '</b> (Δ ' + Datos.fmtDeltaUSD(dDa) + ')</span>' +
       '<span class="delta">' + (ant ? 'intervalo desde ' + Datos.fmtDia(ant.d) : 'inicio de la tormenta') + '</span>';
-  },
-
-  /* ===================== VISTA COMPARAR ===================== */
-
-  async _vistaComparar(aId, bId, token) {
-    const main = document.getElementById('vista');
-    const orden = Datos.ordenPorMuertes();
-    let a = Datos.porId(aId) ? aId : (orden[0] && orden[0].id);
-    let b = Datos.porId(bId) ? bId : (orden[1] && orden[1].id);
-    if (a === b) b = (orden.find(t => t.id !== a) || {}).id;
-    main.innerHTML = '<p class="cargando mono">Cargando comparación…</p>';
-
-    let A, B;
-    try {
-      A = await Datos.tormenta(a); B = await Datos.tormenta(b);
-    } catch (err) {
-      main.innerHTML = '<section class="carga-error"><h1>No se pudo cargar la comparación</h1><p class="mono">' + (err.message || err) + '</p></section>';
-      return;
-    }
-    if (!(await this._esperaRuta(token))) return;
-    this._estado = { tipo: 'comparar' };
-
-    const opciones = orden.map(t => '<option value="' + t.id + '"' + (t.id === A.id ? ' selected' : '') + '>' + t.nombre + ' ' + t.anio + '</option>').join('');
-
-    main.innerHTML =
-      '<section class="comparar">' +
-      '<div class="compara-controles">' +
-      '<label class="compara-label">A <select class="selector mono" id="sel-a" aria-label="Primera tormenta">' + opciones + '</select></label>' +
-      '<span class="compara-vs mono" aria-hidden="true">vs</span>' +
-      '<label class="compara-label">B <select class="selector mono" id="sel-b" aria-label="Segunda tormenta">' + orden.map(t => '<option value="' + t.id + '"' + (t.id === B.id ? ' selected' : '') + '>' + t.nombre + ' ' + t.anio + '</option>').join('') + '</select></label>' +
-      '</div>' +
-      '<div class="compara-cuerpo">' +
-      this._htmlCabeceraComparar(A, Paneles.PIZARRA) +
-      this._htmlCabeceraComparar(B, Paneles.SIENA) +
-      '</div>' +
-      '<div class="compara-graficas" id="compara-graficas"></div>' +
-      '</section>';
-
-    document.title = 'Vientovis — Comparar: ' + A.nombre + ' vs ' + B.nombre;
-
-    const go = () => { location.hash = '#comparar?a=' + a + '&b=' + b; };
-    document.getElementById('sel-a').addEventListener('change', ev => { a = ev.target.value; go(); });
-    document.getElementById('sel-b').addEventListener('change', ev => { b = ev.target.value; go(); });
-
-    this._paneles = Paneles.crearComparar(document.getElementById('compara-graficas'), {
-      a: A, b: B, lo: -120, hi: 240
-    });
-
-    this._al('resize', (() => { let t; return () => { clearTimeout(t); t = setTimeout(() => this._paneles && this._paneles.redibujar(), 160); }; })());
-  },
-
-  _htmlCabeceraComparar(storm, color) {
-    const meta = Datos.porId(storm.id) || storm; // cat_pico/muertes/danos viven en el índice
-    const toca = Datos.primerTocatierra(storm.puntos);
-    return '<div class="compara-ficha" style="--color:' + color + '">' +
-      '<span class="muestra" style="border-top-color:' + color + ';border-top-width:3px" aria-hidden="true"></span>' +
-      '<h2 class="compara-nombre">' + meta.nombre + ' <span class="ficha-anio">' + meta.anio + '</span></h2>' +
-      '<span class="chip chip-cat-' + meta.cat_pico + '">Cat ' + meta.cat_pico + '</span>' +
-      '<p class="compara-numeros mono"><b>' + Datos.fmtEntero(meta.muertes_total) + '</b> muertes · <b>' + Datos.fmtUSDCorto(meta.danos_total_usd) + '</b></p>' +
-      '<p class="compara-nota mono">' + (toca ? 'Primer tocatierra: ' + Datos.fmtDiaMesAnio(toca.d) + ' UTC · Cat ' + toca.cat_ss + ' · ' + toca.viento_kt + ' kt' : 'Sin tocatierra registrado') + '</p>' +
-      '</div>';
   }
+
 };
 
 window.App = App;

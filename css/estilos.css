@@ -1,10 +1,9 @@
 /* estilos.css — vientovis (tema «tormenta en gris»)
  * Sala de situación: gris oscuro profundo con brillos verde agua y grano
  * sutil; el blanco se reserva para los datos. Canales de datos disciplinados:
- *  - categoría Saffir–Simpson → única paleta semáforo verde→rojo (el carmesí
- *    de muertes jamás se usa como categoría)
+ *  - categoría Saffir–Simpson → única paleta RAMPA DE ROJOS (V2: más cat,
+ *    más oscura; el carmesí de muertes es más rosado y nunca es categoría)
  *  - muertes → carmesí propio · daños → ámbar propio
- *  - comparar A/B → dos neutros (bruma / arena) entre sí distinguibles
  * El acento verde agua (#2EA38B) es CHROME (botones, foco, estados activos),
  * nunca datos.
  * Tipografía: Fraunces (display serif) + Archivo (interfaz) + Spline Sans Mono
@@ -15,8 +14,8 @@
 
   /* atmósfera */
   --fondo: #242220;        /* gris tormenta */
-  --fondo-2: #1b1a18;      /* vidrio de cabecera / reproductor */
-  --mar: #1c1a18;          /* océano del mapa y de los minimapas */
+  --fondo-2: #1b1a18;      /* vidrio del reproductor */
+  --mar: #1c1a18;          /* océano del mapa de la vista principal */
 
   /* superficies */
   --panel: #2e2b28;
@@ -35,18 +34,19 @@
   --acento-2: #5ec4ae;
 
   /* canales de datos NO categoría */
-  --carmesi: #e8506a;      /* muertes */
-  --carmesi-2: #ff8b9e;
+  --carmesi: #ea4f7e;      /* muertes: un rosado aparte, no choca con la rampa de rojos de categoría */
+  --carmesi-2: #ff84a6;
   --ambar: #e8a845;        /* daños */
   --ambar-2: #f5c56b;
 
-  /* paleta de categoría (semáforo verde→rojo) — SOLO categoría */
-  --cat0: #29c47f;
-  --cat1: #8fc72f;
-  --cat2: #d8c21c;
-  --cat3: #f0952e;
-  --cat4: #ef5f2d;
-  --cat5: #e63946;
+  /* paleta de categoría (V2: rampa de rojos, más cat = más oscuro) — SOLO categoría
+   * Idéntico valor a Datos.CAT_COLORES en js/datos.js. */
+  --cat0: #f2a08f;
+  --cat1: #e47762;
+  --cat2: #d0503f;
+  --cat3: #b33326;
+  --cat4: #8f221c;
+  --cat5: #6b1414;
 
   --radio: 12px;
   --sombra: 0 16px 40px rgba(12, 11, 10, 0.55);
@@ -58,13 +58,17 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* portada: scroll por saltos entre hero y visualización (ver .hero/.tormenta) */
+  scroll-snap-type: y mandatory;
+}
 
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--texto);
-  font: 400 15px/1.5 var(--sans);
+  font: 400 17px/1.5 var(--sans);
   -webkit-font-smoothing: antialiased;
   background:
     radial-gradient(1100px 540px at 6% -10%, rgba(46, 163, 139, 0.18), transparent 62%),
@@ -101,87 +105,6 @@ a { color: inherit; }
 
 b { font-weight: 600; }
 
-/* ------------ cabecera ------------ */
-
-.cabecera {
-  position: sticky;
-  top: 0;
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  gap: 26px;
-  padding: 12px 22px 11px;
-  background: rgba(27, 26, 24, 0.86);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--linea);
-}
-
-/* barrido de color bajo la cabecera (chrome, no datos) */
-.cabecera::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -2px;
-  height: 2px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(46, 163, 139, 0.85) 22%,
-    rgba(143, 217, 200, 0.75) 55%,
-    rgba(106, 99, 90, 0.6) 82%,
-    transparent 100%);
-  pointer-events: none;
-}
-
-.marca {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  justify-content: center;
-}
-
-.marca-titulo {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font: 700 22px/1 var(--serif);
-  letter-spacing: -0.01em;
-  color: var(--texto);
-}
-
-/* remolino decorativo junto a la marca */
-.marca-glifo {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: conic-gradient(from 200deg, var(--acento), #8fd9c8, #4a4540, var(--acento));
-  flex: none;
-}
-
-.nav {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.nav-enlace {
-  font: 500 12px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  text-decoration: none;
-  padding: 7px 10px;
-  color: var(--texto-2);
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s ease;
-}
-
-.nav-enlace:hover { color: var(--texto); }
-
-.nav-enlace.activo {
-  color: var(--texto);
-  border-bottom-color: var(--acento);
-}
-
 /* ------------ contenedores ------------ */
 
 .vista { min-height: calc(100vh - 150px); position: relative; }
@@ -189,7 +112,7 @@ b { font-weight: 600; }
 .cargando {
   padding: 60px 24px;
   color: var(--texto-2);
-  font-size: 12px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -209,13 +132,13 @@ b { font-weight: 600; }
   background: var(--panel);
 }
 
-.carga-error h1 { font: 600 26px var(--serif); margin: 0 0 10px; }
+.carga-error h1 { font: 600 30px var(--serif); margin: 0 0 10px; }
 .carga-error p { margin: 4px 0; color: var(--texto-2); }
 
 /* ------------ botones ------------ */
 
 .btn {
-  font: 500 11.5px var(--mono);
+  font: 500 13.5px var(--mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--texto);
@@ -262,7 +185,7 @@ b { font-weight: 600; }
 
 .chip {
   display: inline-block;
-  font: 500 10px var(--mono);
+  font: 500 11.5px var(--mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 2px 8px 3px;
@@ -273,262 +196,290 @@ b { font-weight: 600; }
 
 .chip-neutro { background: var(--panel-3); color: var(--texto); }
 
-/* Fondos claros/medios en los 6 pasos: texto oscuro #0b0e14 para AA.
- * (cat5 #e63946: blanco daría 3.6:1; oscuro da 4.6:1.) */
-.chip-cat-0 { background: var(--cat0); color: #0b0e14; }
-.chip-cat-1 { background: var(--cat1); color: #0b0e14; }
-.chip-cat-2 { background: var(--cat2); color: #0b0e14; }
-.chip-cat-3 { background: var(--cat3); color: #0b0e14; }
-.chip-cat-4 { background: var(--cat4); color: #0b0e14; }
-.chip-cat-5 { background: var(--cat5); color: #0b0e14; }
+/* Texto del chip por FONDO (AA, contraste medido contra cada fondo):
+ * rojos claros (cat0–2) → texto casi negro: #f2a08f 9,4:1 · #e47762 6,5:1 ·
+ * #d0503f 4,5:1; rojos oscuros (cat3–5) → texto claro del sitio: #b33326 5,1:1 ·
+ * #8f221c 8,7:1 · #6b1414 12,1:1. */
+.chip-cat-0, .chip-cat-1, .chip-cat-2 { color: #0b0e14; }
+.chip-cat-3, .chip-cat-4, .chip-cat-5 { color: var(--texto); }
 
-.chips-categorias {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 8px;
+/* los rojos oscuros ganan definición con un borde algo más marcado */
+.chip-cat-3, .chip-cat-4, .chip-cat-5 { border-color: rgba(240, 238, 233, 0.36); }
+
+/* Chip de INTENSIDAD (fondo = rampa de rojos, texto blanco, AA ≥ 4,5:1):
+ * mismas variantes oscurecidas de cat 0–2 que el chip del reproductor
+ * (.rep-valores, más abajo) y rojos de cat 3–5 sin cambio. Hoy lo usa el chip
+ * de la cabecera de tormenta (.tormenta-cabecera). La paleta global
+ * (--cat0..--cat5), leyenda, mapa y selector NO cambian. */
+.chip-intensidad.chip-cat-0 { background: #b4574a; }
+.chip-intensidad.chip-cat-1 { background: #a94538; }
+.chip-intensidad.chip-cat-2 { background: #8f342c; }
+.chip-intensidad.chip-cat-3 { background: #b33326; }
+.chip-intensidad.chip-cat-4 { background: #8f221c; }
+.chip-intensidad.chip-cat-5 { background: #6b1414; }
+.chip-intensidad.chip-cat-0, .chip-intensidad.chip-cat-1, .chip-intensidad.chip-cat-2,
+.chip-intensidad.chip-cat-3, .chip-intensidad.chip-cat-4, .chip-intensidad.chip-cat-5 {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
-/* ------------ galería ------------ */
+/* disco del selector: la cifra de muertes manda, el chip es discreto */
+.chip-mini {
+  font-size: 10.5px;
+  padding: 1.5px 7px 2.5px;
+  letter-spacing: 0.04em;
+}
 
-.galeria-cabecera {
-  max-width: 1400px;
+/* ------------ pantalla principal: héroe + selector ------------ */
+
+.inicio {
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 48px 22px 4px;
+  padding: 10px 22px 14px;
 }
 
-.galeria-titulo {
-  font: 600 clamp(32px, 4.7vw, 58px) / 1.04 var(--serif);
+/* héroe compacto (el mapa manda): título a la izquierda, descripción
+ * + frase editorial computada a la derecha, con línea base común */
+.hero {
+  scroll-snap-align: start;
+  scroll-margin-top: 14px; /* sin cabecera fija: el hero aterriza casi al borde superior */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 440px);
+  gap: 8px 40px;
+  align-items: end;
+  padding: 2px 0 12px;
+  border-bottom: 2px solid var(--linea-2);
+}
+
+.hero-titulo {
+  font: 600 clamp(30px, 3.6vw, 48px)/1.05 var(--serif);
   letter-spacing: -0.015em;
   margin: 0;
-  max-width: 21ch;
+  max-width: 20ch;
   color: var(--texto);
 }
 
-.galeria-titulo em {
+.hero-titulo em {
   font-style: italic;
   font-weight: 500;
   color: var(--acento-2);
 }
 
-.galeria-lede {
-  max-width: 74ch;
-  margin: 16px 0 18px;
+.hero-lede {
+  margin: 5px 0 10px;
   font-size: 16.5px;
   line-height: 1.55;
   color: var(--texto-2);
+  max-width: 62ch;
 }
 
-.cinta {
+/* frase editorial «potencia ≠ destructividad», calculada del índice en runtime */
+.hero-frase {
+  margin: 0;
+  font: italic 500 16.5px/1.45 var(--serif);
+  color: var(--texto);
+  border-left: 3px solid var(--acento);
+  padding: 2px 0 2px 12px;
+  max-width: 52ch;
+}
+
+/* ------- selector de huracanes: orden por MUERTES, no por potencia ------- */
+
+/* separador entre las dos zonas de snap (selector → visualización): hairline
+ * que se desvanece en los bordes con un tramo central en acento; --sep fija el
+ * aire simétrico alrededor de la línea y, con él, el padding inferior */
+.selec {
+  position: relative;
+  --sep: 26px;
+  padding: 16px 0 calc(2 * var(--sep));
+}
+
+.selec::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--sep);
+  height: 1px;
+  background:
+    linear-gradient(90deg, transparent 0, rgba(46, 163, 139, 0.7) 50%, transparent 100%) center / 120px 1px no-repeat,
+    linear-gradient(90deg, transparent 0, var(--linea-2) 16%, var(--linea-2) 84%, transparent 100%);
+}
+
+.selec-etiqueta {
   display: flex;
-  gap: 2px;
-  height: 14px;
-  max-width: 760px;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid rgba(240, 238, 233, 0.3);
-  background: rgba(18, 17, 15, 0.55);
-}
-
-.cinta-seg {
-  min-width: 3px;
-  opacity: 1; /* sin atenuación: color pleno de categoría también en segmentos chicos */
-}
-
-.cinta-caption {
-  margin: 8px 0 0;
-  font-size: 10px;
-  color: var(--texto-2);
-  letter-spacing: 0.04em;
-  max-width: 640px;
-}
-
-.galeria-grid {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 22px 22px 10px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(226px, 1fr));
-  gap: 16px;
-  list-style: none;
-}
-
-/* atribución única de los mini-mapas satelitales (C2) */
-.galeria-atr {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2px 22px 42px;
-  font: 400 9.5px var(--mono);
-  letter-spacing: 0.04em;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 10px;
+  font: 500 11.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
   color: var(--texto-3);
 }
 
-.ficha {
+.selec-etiqueta b { color: var(--texto-2); font-weight: 500; }
+
+/* clave de la mini-barra de impacto: muertes relativas (canal carmesí) */
+.selec-clave {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.05em;
+}
+
+.selec-clave i {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--carmesi);
+  display: inline-block;
+}
+
+/* grilla 5×2: los 10 huracanes SIEMPRE visibles sin desplazar la página;
+ * todo queda a un clic, con la tarjeta activa marcada */
+.selec-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.selec-item { min-width: 0; }
+
+.selec-tarjeta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  font: 400 14px var(--sans);
+  color: var(--texto);
   background: var(--panel);
   border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  overflow: hidden;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-  animation: entrada 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+  border-radius: 10px;
+  padding: 9px 12px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.ficha:nth-child(1) { animation-delay: 0.02s; }
-.ficha:nth-child(2) { animation-delay: 0.06s; }
-.ficha:nth-child(3) { animation-delay: 0.1s; }
-.ficha:nth-child(4) { animation-delay: 0.14s; }
-.ficha:nth-child(5) { animation-delay: 0.14s; }
-.ficha:nth-child(6) { animation-delay: 0.18s; }
-.ficha:nth-child(7) { animation-delay: 0.18s; }
-.ficha:nth-child(8) { animation-delay: 0.22s; }
-.ficha:nth-child(9) { animation-delay: 0.26s; }
-.ficha:nth-child(10) { animation-delay: 0.3s; }
-
-@keyframes entrada {
-  from { opacity: 0; transform: translateY(16px); }
+.selec-tarjeta:hover {
+  border-color: var(--linea-2);
+  background: var(--panel-2);
+  transform: translateY(-2px);
 }
 
-.ficha:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 38px rgba(12, 11, 10, 0.55), 0 0 0 1px rgba(46, 163, 139, 0.35);
+/* estado activo claro: aro verde agua + fondo acintado (coherente con el foco) */
+.selec-tarjeta.activo {
   border-color: var(--acento);
+  background: rgba(46, 163, 139, 0.09);
+  box-shadow: 0 0 0 1px var(--acento);
 }
 
-.ficha-enlace {
-  display: block;
-  text-decoration: none;
-  height: 100%;
-}
-
-.ficha-enlace:focus-visible {
-  outline-offset: 0;
-  outline: 3px solid var(--acento);
-}
-
-.ficha-mini {
-  position: relative;
-  background: var(--mar);
-}
-
-/* mini-mapas Leaflet reales (satélite) de las fichas (C2):
- * no interactivos — el click pasa al enlace de la ficha */
-.mini-mapa {
-  height: 138px;
-  background: #1c1a18;
-  pointer-events: none;
-}
-
-.mini-vacio { height: 120px; }
-
-/* viñeta neutra sobre el satélite: cohesión + legibilidad de la píldora */
-.ficha-mini::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 760;
-  pointer-events: none;
-  box-shadow: inset 0 0 22px rgba(12, 11, 10, 0.36);
-}
-
-.ficha-rango {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  z-index: 950;
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  background: rgba(24, 23, 21, 0.8);
-  color: #e8e4dd;
-  padding: 2px 8px 3px;
-  border: 1px solid rgba(240, 238, 233, 0.22);
-  border-radius: 999px;
-}
-
-.ficha-rango.impacto {
-  background: var(--acento);
-  border-color: var(--acento);
-  color: #1b1a18;
-  font-weight: 600;
-}
-
-.ficha-cuerpo { padding: 12px 13px 13px; }
-
-.ficha-nombre {
-  font: 600 20px/1.1 var(--serif);
-  letter-spacing: -0.01em;
-  margin: 0 0 7px;
+.selec-sup {
   display: flex;
   align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.selec-rango {
+  font: 500 10.5px var(--mono);
+  letter-spacing: 0.07em;
+  color: var(--texto-3);
+}
+
+.selec-tarjeta.activo .selec-rango { color: var(--acento-2); }
+
+.selec-nombre {
+  font: 600 17.5px/1.1 var(--serif);
+  letter-spacing: -0.01em;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+.selec-anio { font: 400 11.5px var(--mono); color: var(--texto-2); }
+
+/* chip discreto a la izquierda, muertes con TODO el peso a la derecha */
+.selec-medias {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  color: var(--texto);
+  min-width: 0;
 }
 
-.ficha-anio {
-  font: 400 11px var(--mono);
-  color: var(--texto-2);
-}
+.selec-medias .chip { flex: none; }
 
-.ficha-chips { margin: 0 0 4px; }
-
-.ficha-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px 12px;
-  margin: 8px 0 0;
-}
-
-.ficha-stats div { margin: 0; }
-
-.ficha-stats dt {
-  font: 500 8.5px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--texto-2);
-}
-
-.ficha-stats dd {
-  margin: 1px 0 0;
-  font: 500 13.5px/1.2 var(--mono);
+.selec-muertes, .selec-danos {
   font-variant-numeric: tabular-nums;
-  color: var(--texto);
+  white-space: nowrap;
+}
+
+.selec-muertes {
+  font: 600 14.5px/1 var(--mono);
+  color: var(--carmesi-2);
+}
+
+.selec-colas { display: flex; justify-content: flex-end; }
+
+.selec-danos {
+  font: 500 13px/1 var(--mono);
+  color: var(--texto-2);
+}
+
+.selec-unidad {
+  font: 400 10px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--texto-3);
+  margin-left: 4px;
+}
+
+/* mini-barra de impacto: ANCHO = muertes relativas al máximo (carmesí, canal
+ * de muertes — nunca la categoría); así potencia ≠ destructividad se lee solo */
+.selec-barra {
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(240, 238, 233, 0.10);
+}
+
+.selec-barra i {
+  display: block;
+  height: 100%;
+  background: var(--carmesi);
+  border-radius: 2px;
 }
 
 /* ------------ vista tormenta ------------ */
 
 .tormenta {
+  scroll-snap-align: start;
+  scroll-margin-top: 14px; /* sin cabecera fija: el bloque aterriza casi al borde superior */
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 22px 34px;
+  padding: 6px 22px 8px;
   position: relative;
 }
 
 .tormenta-cabecera {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px 14px;
   flex-wrap: wrap;
-  padding: 8px 0 12px;
+  padding: 0 0 5px;
   border-bottom: 2px solid var(--linea-2);
 }
 
-.tormenta-volver {
-  font: 500 10.5px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  text-decoration: none;
-  color: var(--texto-2);
-  padding: 4px 2px;
-}
-
-.tormenta-volver:hover { color: var(--acento-2); }
-
 .tormenta-titulo {
-  font: 600 27px/1.05 var(--serif);
+  font: 600 23.5px/1.05 var(--serif);
   letter-spacing: -0.01em;
   margin: 0;
   display: inline-flex;
   align-items: baseline;
-  gap: 9px;
+  gap: 8px;
 }
 
 .tormenta-anio {
@@ -540,8 +491,8 @@ b { font-weight: 600; }
   margin-left: auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
-  font-size: 11px;
+  gap: 4px 14px;
+  font-size: 12.5px;
   color: var(--texto-2);
 }
 
@@ -550,14 +501,14 @@ b { font-weight: 600; }
 .tormenta-cuerpo {
   display: grid;
   grid-template-columns: minmax(360px, 45fr) 55fr;
-  gap: 16px;
+  gap: 12px 14px;
   align-items: start;
-  padding-top: 16px;
+  padding-top: 4px;
 }
 
 .tormenta-mapa {
   position: relative;
-  min-height: 430px;
+  min-height: 300px; /* la altura final la fija app.js (relativa al viewport) */
   border: 1px solid var(--linea);
   border-radius: var(--radio);
   overflow: hidden;
@@ -585,7 +536,7 @@ b { font-weight: 600; }
 .leyenda-categorias {
   position: absolute;
   left: 10px;
-  bottom: 12px;
+  bottom: 46px; /* por encima del ticker de noticias del pie (38 px + margen) */
   z-index: 800;
   display: flex;
   align-items: center;
@@ -602,7 +553,7 @@ b { font-weight: 600; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font: 500 9px var(--mono);
+  font: 500 10.5px var(--mono);
   color: var(--texto-2);
 }
 
@@ -625,8 +576,8 @@ b { font-weight: 600; }
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 7px 10px;
+  gap: 4px;
+  padding: 6px 10px;
   background: rgba(24, 23, 21, 0.85);
   border: 1px solid var(--linea);
   border-radius: 8px;
@@ -641,7 +592,7 @@ b { font-weight: 600; }
 }
 
 .contador-impacto .ci-etq {
-  font: 500 9px var(--mono);
+  font: 500 10.5px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--texto-2);
@@ -650,7 +601,7 @@ b { font-weight: 600; }
 
 .contador-impacto .ci-cifra {
   margin-left: auto;
-  font: 600 15px/1.25 var(--mono);
+  font: 600 17.5px/1.25 var(--mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -658,9 +609,109 @@ b { font-weight: 600; }
 .ci-muertes { color: var(--carmesi-2); }
 .ci-danos { color: var(--ambar-2); }
 
+/* fecha/hora UTC del punto activo: esquina superior izquierda del mapa, mismo
+ * vidrio oscuro que el contador (que vive arriba a la derecha), mono, sin
+ * capturar clics; el reproductor ya no duplica el reloj */
+.reloj-mapa {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1001;
+  padding: 6px 10px;
+  background: rgba(24, 23, 21, 0.85);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  font: 600 14px/1.25 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+/* el reloj ocupa la esquina superior izquierda: el control de zoom de Leaflet
+ * baja a la altura de la leyenda para no solaparse */
+.tormenta-mapa .leaflet-top.leaflet-left { top: 50px; }
+
+/* barra de noticias de TV al pie del mapa (mismo overlay que contador/reloj):
+ * chip «EN VIVO» (verde agua con texto oscuro, 5,5:1 AA) + cuerpo de vidrio
+ * oscuro con la última actualización del huracán, SIEMPRE en un renglón con
+ * elipsis. z-index 1001 como el contador y pointer-events none: es
+ * informativa, no captura clics del mapa. */
+.ticker-noticias {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: stretch;
+  height: 38px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ticker-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  background: var(--acento);
+  color: #1b1a18;
+  font: 600 11.5px/1 var(--mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* punto «en vivo»: pulso sutil de opacidad (anulado con prefers-reduced-motion) */
+.ticker-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1b1a18;
+  animation: ticker-punto 1.7s ease-in-out infinite;
+}
+
+.ticker-cuerpo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: rgba(24, 23, 21, 0.92);
+  border-top: 1px solid var(--linea);
+  backdrop-filter: blur(4px);
+}
+
+.ticker-texto {
+  display: block;
+  width: 100%;
+  font: 500 14px/1.25 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* un slide corto por actualización; app.js re-aplica la clase por punto */
+.ticker-texto.entra { animation: ticker-entra 0.3s ease-out; }
+
+@keyframes ticker-entra {
+  from { transform: translateX(-18px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes ticker-punto {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
 .etq-tocatierra {
   display: inline-block;
-  font: 500 9px var(--mono);
+  font: 500 10.5px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--texto);
@@ -670,6 +721,82 @@ b { font-weight: 600; }
   padding: 1px 5px;
   white-space: nowrap;
   box-shadow: 0 1px 5px rgba(12, 11, 10, 0.6); /* recorte sobre satélite */
+}
+
+/* Etiqueta de tocatierra CON nota (timestamp informativo): tarjeta compacta
+ * de dos líneas — hora UTC + Cat N arriba, lugar abajo — con el mismo vidrio
+ * oscuro semitransparente que la leyenda para leerse AA sobre el satélite.
+ * Su hover abre el tooltip de la nota (.nota-tocatierra); pointer-events
+ * explícito para garantizar el hover aunque el icono de Leaflet quede fuera
+ * de su sistema de interactividad. */
+.etq-tocatierra.etq-toca-nota {
+  display: inline-block;
+  max-width: 200px;
+  padding: 3px 6px 4px;
+  white-space: normal;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.etq-toca-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.etq-toca-hora { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.etq-toca-lugar {
+  display: block;
+  margin-top: 2px;
+  font: 500 11.5px/1.3 var(--sans);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--texto-2);
+}
+
+/* tooltip flotante de la NOTA (hover sobre una etiqueta): mismo vidrio oscuro
+ * que leyenda/contador, por encima de los paneles del mapa; no captura el
+ * puntero (la etiqueta lleva además title/aria-label como respaldo) */
+.nota-tocatierra {
+  position: fixed;
+  z-index: 1200;
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 11px 9px;
+  background: rgba(24, 23, 21, 0.88);
+  border: 1px solid var(--linea-2);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 12px 30px rgba(12, 11, 10, 0.55);
+  pointer-events: none;
+}
+
+.nota-tocatierra .nt-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 5px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--linea);
+  font: 600 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+}
+
+.nota-tocatierra .nt-lugar {
+  margin: 0 0 3px;
+  font: 600 13.5px/1.35 var(--sans);
+  color: var(--texto);
+}
+
+.nota-tocatierra .nt-nota {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--texto-2);
 }
 
 /* ícono del huracán (img/hurricane.png), escalado por categoría:
@@ -702,12 +829,12 @@ b { font-weight: 600; }
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  padding: 11px 14px 0 14px;
+  gap: 2px 12px;
+  padding: 4px 14px 0 14px;
 }
 
 .panel-titulo {
-  font: 600 11px var(--sans);
+  font: 600 13px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.09em;
   margin: 0;
@@ -715,7 +842,7 @@ b { font-weight: 600; }
 }
 
 .panel-sub {
-  font: 400 10px var(--mono);
+  font: 400 11.5px var(--mono);
   color: var(--texto-2);
   letter-spacing: 0.03em;
 }
@@ -726,7 +853,7 @@ b { font-weight: 600; }
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 12px;
-  font: 400 9.5px var(--mono);
+  font: 400 11px var(--mono);
   color: var(--texto-2);
 }
 
@@ -758,21 +885,32 @@ b { font-weight: 600; }
 
 /* svg */
 .eje text {
-  font: 10px var(--mono);
+  font: 11.5px var(--mono);
   fill: var(--texto-2);
   font-variant-numeric: tabular-nums;
 }
 
 .eje path, .eje line { stroke: var(--linea); }
 
+/* timestamps de tocatierra bajo el eje X del panel inferior (daños): mono
+ * 10 px en su propio renglón (los ticks regulares quedan intactos arriba);
+ * .tick-toca-eje prolonga el trazo vertical del tocatierra bajo el eje */
+.etq-toca-eje {
+  font: 500 11.5px var(--mono);
+  fill: var(--texto-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.tick-toca-eje { stroke: var(--acento); stroke-width: 1; opacity: 0.85; }
+
 .etq-ir {
-  font: 8.5px var(--mono);
+  font: 10px var(--mono);
   fill: #a39d94;
   letter-spacing: 0.08em;
 }
 
 .etq-serie {
-  font: 500 10px var(--sans);
+  font: 500 11.5px var(--sans);
   font-style: italic;
 }
 
@@ -812,7 +950,7 @@ b { font-weight: 600; }
 }
 
 .ficha-titulo {
-  font: 600 10.5px var(--sans);
+  font: 600 12px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.09em;
   margin: 0;
@@ -822,7 +960,7 @@ b { font-weight: 600; }
 .ficha-cerrar {
   border: 0;
   background: transparent;
-  font-size: 15px;
+  font-size: 17.5px;
   line-height: 1;
   color: var(--texto-2);
   cursor: pointer;
@@ -833,7 +971,7 @@ b { font-weight: 600; }
 
 .ficha-instante {
   margin: 10px 0 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--texto);
   border-bottom: 1px solid var(--linea);
@@ -855,7 +993,7 @@ b { font-weight: 600; }
 .ficha-datos > div:last-child { border-bottom: 0; }
 
 .ficha-datos dt {
-  font: 500 9px var(--mono);
+  font: 500 10.5px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--texto-2);
@@ -864,7 +1002,7 @@ b { font-weight: 600; }
 
 .ficha-datos dd {
   margin: 0;
-  font-size: 11px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--texto);
@@ -879,10 +1017,33 @@ b { font-weight: 600; }
 }
 
 .ficha-resumen-titulo {
-  font: 600 10px var(--sans);
+  font: 600 11.5px var(--sans);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin: 0 0 5px;
+  color: var(--texto);
+}
+
+/* explicación de la nota de tocatierra dentro de la ficha fijada (solo si el
+ * punto activo es un tocatierra emparejado con una nota) */
+.ficha-nota {
+  margin: 9px 0 0;
+  padding: 7px 9px 8px;
+  background: rgba(24, 23, 21, 0.55);
+  border: 1px solid var(--linea);
+  border-left: 2px solid var(--linea-2);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto-2);
+}
+
+.ficha-nota-cab {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   color: var(--texto);
 }
 
@@ -891,58 +1052,114 @@ b { font-weight: 600; }
 .reproductor {
   position: relative;
   z-index: 1100;
-  margin: 14px auto 0;
-  padding: 12px 16px;
+  margin: 4px auto 0;
+  padding: 7px 14px;
   background: rgba(27, 26, 24, 0.92);
   backdrop-filter: blur(8px);
   border: 1px solid var(--linea);
   border-radius: var(--radio);
   box-shadow: 0 10px 26px rgba(12, 11, 10, 0.35);
   display: grid;
-  grid-template-columns: auto auto minmax(200px, 1fr) auto auto;
-  grid-template-areas:
-    'play vel scrub reloj audio'
-    'valores valores valores valores valores';
+  /* una sola fila en escritorio: play · scrub · valores · audio */
+  grid-template-columns: auto minmax(160px, 1fr) minmax(0, auto) auto;
+  grid-template-areas: 'play scrub valores audio';
   align-items: center;
-  gap: 8px 14px;
+  gap: 6px 12px;
 }
 
-/* play y sonido: encabezan la barra superior y pesan más (padding y tamaño) */
-.reproductor #btn-play,
+/* Sonido: CTA llamativa con el mismo sub-pulso que Reproducir, en violeta
+ * (el verde agua se reserva al chrome dominante). Violeta #8d6fd1 con tinta
+ * #0b0e14 → 4,9:1 (AA); el blanco sobre ese violeta solo da 3,9:1, por eso el
+ * texto va oscuro. Al activarse el audio el botón se oculta (.oculto) y el
+ * control pasa a Silenciar, que sigue neutro y sin pulso. Tamaño cercano a
+ * Reproducir sin restarle dominio. */
 .reproductor #btn-audio {
-  font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 9px;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 8px;
+  min-width: 0;
+  background: #8d6fd1;
+  border-color: #8d6fd1;
+  color: #0b0e14;
+  box-shadow: 0 0 0 1px rgba(141, 111, 209, 0.35), 0 10px 28px rgba(125, 91, 199, 0.24);
 }
 
-.reproductor #btn-play { min-width: 148px; }
-
-.velocidades {
-  display: flex;
-  gap: 0;
+/* hover: violeta un punto más claro (mejora el contraste con la tinta) */
+.reproductor #btn-audio:hover:not(:disabled) {
+  background: #9d83db;
+  border-color: #9d83db;
+  color: #0b0e14;
+  box-shadow: 0 0 0 1px rgba(141, 111, 209, 0.55), 0 12px 32px rgba(125, 91, 199, 0.34);
 }
 
-.velocidades .vel {
-  font: 500 11px var(--mono);
-  padding: 7px 10px;
-  background: transparent;
-  border: 1px solid var(--linea-2);
-  border-radius: 0;
-  cursor: pointer;
-  color: var(--texto);
-  margin-left: -1px;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+/* el sub-pulso solo corre mientras el botón está pendiente de activar
+ * (visible y habilitado): activado (oculto) deja de ser llamativo */
+.reproductor #btn-audio:not(.oculto):not(:disabled) {
+  animation: pulso-audio 2.6s ease-in-out infinite;
 }
 
-.velocidades .vel:first-child { border-radius: 7px 0 0 7px; margin-left: 0; }
-.velocidades .vel:last-child { border-radius: 0 7px 7px 0; }
+/* sub-pulso violeta: sombra + escala 2 % (se anula con prefers-reduced-motion) */
+@keyframes pulso-audio {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1px rgba(141, 111, 209, 0.35), 0 8px 22px rgba(125, 91, 199, 0.22);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 5px rgba(141, 111, 209, 0.16), 0 10px 30px rgba(125, 91, 199, 0.42);
+  }
+}
 
-.velocidades .vel:hover { background: rgba(240, 238, 233, 0.08); }
+/* Reproducir: botón DOMINANTE de la barra (acento verde agua + texto oscuro,
+ * mayor que el resto) con sub-pulso sutil mientras no está reproduciendo */
+.reproductor #btn-play {
+  grid-area: play;
+  font-size: 17.5px;
+  font-weight: 700;
+  padding: 11px 22px;
+  border-radius: 8px;
+  min-width: 158px;
+  box-shadow: 0 0 0 1px rgba(94, 196, 174, 0.35), var(--sombra-acento);
+}
 
-.velocidades .vel.activo {
-  background: var(--acento);
-  border-color: var(--acento);
+.reproductor #btn-play:hover:not(:disabled) {
+  background: var(--acento-2);
+  border-color: var(--acento-2);
   color: #1b1a18;
+  box-shadow: 0 0 0 1px rgba(94, 196, 174, 0.55), 0 12px 32px rgba(46, 163, 139, 0.34);
+}
+
+.reproductor #btn-play:not(.reproduciendo) {
+  animation: pulso-play 2.6s ease-in-out infinite;
+}
+
+/* reproduciendo: estado «pausar» menos llamativo (tinte neutro, sin pulso) */
+.reproductor #btn-play.reproduciendo {
+  background: rgba(240, 238, 233, 0.07);
+  border-color: var(--linea-2);
+  color: var(--texto);
+  font-weight: 600;
+  box-shadow: none;
+  animation: none;
+}
+
+.reproductor #btn-play.reproduciendo:hover:not(:disabled) {
+  background: rgba(240, 238, 233, 0.12);
+  border-color: var(--texto-2);
+  color: var(--texto);
+}
+
+/* sub-pulso: sombra + escala 2 % (se anula con prefers-reduced-motion) */
+@keyframes pulso-play {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1px rgba(94, 196, 174, 0.35), 0 8px 22px rgba(46, 163, 139, 0.2);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 5px rgba(46, 163, 139, 0.14), 0 10px 30px rgba(46, 163, 139, 0.42);
+  }
 }
 
 .scrubber { grid-area: scrub; }
@@ -997,40 +1214,62 @@ input[type='range'].scrubber::-moz-range-thumb {
 
 .volumen { width: 92px; }
 
+/* Slider de volumen legible sobre el tema oscuro: la pista usa un blanco
+ * translúcido (~0,18) en lugar de var(--linea), que se perdía contra el fondo
+ * del reproductor; el disco verde agua con borde oscuro se lee sobre ella
+ * (thumb/pista ≈ 3,2:1, AA de componentes). El scrubber conserva su estilo. */
 input[type='range'].volumen::-webkit-slider-runnable-track {
-  height: 3px;
-  background: var(--linea);
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(240, 238, 233, 0.18);
 }
 
 input[type='range'].volumen::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: var(--texto);
-  margin-top: -4.5px;
-  border: none;
+  background: var(--acento);
+  border: 2px solid #1b1a18;
+  margin-top: -5px; /* (15 − 5) / 2: centra el disco en la pista */
+  box-shadow: 0 1px 3px rgba(12, 11, 10, 0.55);
+}
+
+input[type='range'].volumen:hover::-webkit-slider-thumb { background: var(--acento-2); }
+
+/* foco visible: anillo verde agua alrededor de la pista */
+input[type='range'].volumen:focus-visible {
+  outline: 2px solid var(--acento-2);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+input[type='range'].volumen::-moz-range-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(240, 238, 233, 0.18);
+}
+
+/* Firefox sí trae relleno de progreso nativo: coherente con el scrubber */
+input[type='range'].volumen::-moz-range-progress {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--acento);
 }
 
 input[type='range'].volumen::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: var(--texto);
-  border: none;
+  background: var(--acento);
+  border: 2px solid #1b1a18;
+  box-shadow: 0 1px 3px rgba(12, 11, 10, 0.55);
 }
 
-.reloj {
-  font: 500 12px var(--mono);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  min-width: 208px;
-  text-align: right;
-  color: var(--texto);
-}
+input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2); }
 
 .audio-grupo {
+  grid-area: audio;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1043,7 +1282,7 @@ input[type='range'].volumen::-moz-range-thumb {
 .rep-valores {
   grid-area: valores;
   margin: 0;
-  font: 400 10.5px var(--mono);
+  font: 400 12.5px var(--mono);
   color: var(--texto-2);
   display: flex;
   flex-wrap: wrap;
@@ -1054,6 +1293,24 @@ input[type='range'].volumen::-moz-range-thumb {
 }
 
 .rep-valores b { color: var(--texto); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Chip de categoría del reproductor: fondo = color de intensidad (rampa de
+ * rojos de categoría) con TEXTO BLANCO siempre. Para cumplir AA (≥ 4,5:1) las
+ * categorías claras (0–2) usan fondos oscurecidos SOLO en este chip:
+ * cat0 #f2a08f→#b4574a (4,8:1) · cat1 #e47762→#a94538 (5,8:1) ·
+ * cat2 #d0503f→#8f342c (7,8:1); cat3–5 conservan Datos.colorCat (#b33326
+ * 5,3:1 · #8f221c · #6b1414). Leyenda, mapa, ficha y selector NO cambian. */
+.rep-valores .chip-cat-0 { background: #b4574a; }
+.rep-valores .chip-cat-1 { background: #a94538; }
+.rep-valores .chip-cat-2 { background: #8f342c; }
+.rep-valores .chip-cat-3 { background: #b33326; }
+.rep-valores .chip-cat-4 { background: #8f221c; }
+.rep-valores .chip-cat-5 { background: #6b1414; }
+.rep-valores .chip-cat-0, .rep-valores .chip-cat-1, .rep-valores .chip-cat-2,
+.rep-valores .chip-cat-3, .rep-valores .chip-cat-4, .rep-valores .chip-cat-5 {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+}
 
 /* ------------ tooltip flotante ------------ */
 
@@ -1069,7 +1326,7 @@ input[type='range'].volumen::-moz-range-thumb {
   max-width: 260px;
 }
 
-.tooltip-flotante p { margin: 2px 0; font-size: 10.8px; line-height: 1.45; }
+.tooltip-flotante p { margin: 2px 0; font-size: 12.5px; line-height: 1.45; }
 
 .tip-titulo {
   font-weight: 600;
@@ -1082,102 +1339,6 @@ input[type='range'].volumen::-moz-range-thumb {
 
 .tip-fila { color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .tip-fila b { color: var(--texto); }
-
-/* ------------ comparar ------------ */
-
-.comparar {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 18px 22px 60px;
-}
-
-.compara-controles {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid var(--linea-2);
-}
-
-.compara-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 12px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--texto);
-}
-
-.compara-vs { color: var(--texto-2); padding: 0 4px; font-size: 11px; }
-
-.selector {
-  font: 500 12.5px var(--mono);
-  padding: 8px 11px;
-  border: 1px solid var(--linea-2);
-  border-radius: 8px;
-  background: var(--panel-2);
-  color: var(--texto);
-  cursor: pointer;
-  min-width: 210px;
-}
-
-.compara-cuerpo {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 16px 0 6px;
-}
-
-.compara-ficha {
-  background: var(--panel);
-  border: 1px solid var(--linea);
-  border-top: 3px solid var(--color, var(--texto-2));
-  border-radius: var(--radio);
-  padding: 13px 16px 11px;
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 5px 11px;
-}
-
-.compara-ficha .muestra { align-self: center; }
-
-.compara-nombre {
-  font: 600 22px/1 var(--serif);
-  margin: 0;
-}
-
-.compara-numeros {
-  margin: 0 0 0 auto;
-  font-size: 11px;
-  color: var(--texto-2);
-}
-
-.compara-numeros b { color: var(--texto); font-variant-numeric: tabular-nums; }
-
-.compara-nota {
-  flex-basis: 100%;
-  margin: 2px 0 0;
-  font-size: 10px;
-  color: var(--texto-2);
-  letter-spacing: 0.03em;
-}
-
-.compara-leyenda {
-  padding: 10px 14px 4px;
-  border-top: 0;
-}
-
-.compara-graficas {
-  background: var(--panel);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  overflow: hidden;
-}
-
-.comparar .panel { border-top: 1px solid var(--linea); }
 
 /* ------------ pie ------------ */
 
@@ -1193,9 +1354,12 @@ input[type='range'].volumen::-moz-range-thumb {
   background: rgba(27, 26, 24, 0.6);
 }
 
-.pie-credito { margin: 0; font: 400 10px var(--mono); color: var(--texto-2); white-space: nowrap; }
+.pie-credito { margin: 0; font: 400 11.5px var(--mono); color: var(--texto-2); white-space: nowrap; }
 
 .pie-integrantes { white-space: normal; }
+
+/* única nota de atribución Esri del mapa principal (V2: antes vivía por ficha) */
+.pie-atr { color: var(--texto-3); }
 
 /* ------------ Leaflet: estilos propios (tema oscuro) ------------ */
 
@@ -1223,58 +1387,91 @@ input[type='range'].volumen::-moz-range-thumb {
 
 .leaflet-control-attribution {
   background: rgba(24, 23, 21, 0.82) !important;
-  font: 9px var(--mono) !important;
+  font: 10.5px var(--mono) !important;
   color: var(--texto-2) !important;
   border-top-left-radius: 4px;
 }
 
+/* la atribución Esri (pie derecho del mapa) sube por encima del ticker */
+.tormenta-mapa .leaflet-bottom { bottom: 44px; }
+
 /* ------------ movimiento ------------ */
 
 @media (prefers-reduced-motion: reduce) {
-  .ficha { animation: none; }
   html { scroll-behavior: auto; }
+  .reproductor #btn-play, .reproductor #btn-audio { animation: none; }
+  .ticker-punto, .ticker-texto.entra { animation: none; }
 }
 
 /* ------------ responsive ------------ */
+
+/* ---------- escritorio: reproductor en una sola fila ---------- */
+
+@media (min-width: 1024px) {
+  /* reproductor: los valores del punto van en la MISMA fila (se recortan con
+   * elipsis si no caben, nunca parten la barra en dos renglones) */
+  .rep-valores {
+    border-top: 0;
+    padding-top: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .rep-valores > span { white-space: nowrap; }
+}
 
 @media (max-width: 1023px) {
   .tormenta-cuerpo { grid-template-columns: 1fr; }
   .ficha-flotante { top: auto; bottom: 10px; }
   .reproductor {
-    grid-template-columns: auto auto 1fr auto;
+    grid-template-columns: auto 1fr;
     grid-template-areas:
-      'play vel scrub scrub'
-      'reloj reloj reloj reloj'
-      'audio audio audio audio'
-      'valores valores valores valores';
-  }
-}
-
-@media (max-width: 700px) {
-  .compara-cuerpo { grid-template-columns: 1fr; }
-  .cabecera { gap: 12px; }
-  .reproductor {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      'play vel'
-      'scrub scrub'
-      'reloj reloj'
+      'play scrub'
       'audio audio'
       'valores valores';
   }
-  .reloj { text-align: left; }
-  .velocidades .vel { padding: 7px 8px; }
+  /* héroe apilado y selector en 2 columnas (los 10 siguen visibles de un vistazo) */
+  .hero { grid-template-columns: 1fr; }
+  .hero-titulo { max-width: none; }
+  .selec-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 620px; }
+}
+
+@media (max-width: 700px) {
+  .reproductor {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'play'
+      'scrub'
+      'audio'
+      'valores';
+  }
+  /* píldoras en tira desplazable en móvil (la página no se mueve) */
+  .selec-clave { display: none; }
+  .selec { --sep: 20px; } /* separador de zonas con algo menos de aire en móvil */
+  .selec-lista {
+    display: flex;
+    max-width: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--linea-2) transparent;
+  }
+  .selec-item { flex: 0 0 158px; min-width: 158px; scroll-snap-align: start; }
+  .selec-tarjeta { padding: 9px 11px 10px; }
+  .selec-nombre { font-size: 16px; }
+  .hero-frase { font-size: 17px; }
 }
 
 @media (max-width: 480px) {
-  .cabecera { padding: 10px 12px 10px; gap: 8px; flex-wrap: wrap; }
-  .marca-titulo { font-size: 18px; }
-  .tormenta { padding-left: 14px; padding-right: 14px; }
+  .inicio, .tormenta { padding-left: 14px; padding-right: 14px; }
+  .hero { gap: 10px; padding-bottom: 14px; }
   .reproductor { padding-left: 12px; padding-right: 12px; }
   .btn-primario { min-width: 90px; }
-  .reproductor #btn-play,
-  .reproductor #btn-audio { font-size: 13px; padding: 11px 16px; }
-  .reproductor #btn-play { min-width: 118px; }
+  .reproductor #btn-audio { font-size: 15px; padding: 11px 16px; }
+  .reproductor #btn-play { font-size: 16px; padding: 12px 18px; min-width: 132px; }
   .audio-grupo { padding-left: 8px; }
-  .reloj { min-width: 0; font-size: 11px; }
+  .ticker-chip { padding: 0 9px; font-size: 10.5px; }
+  .ticker-texto { font-size: 13px; }
 }

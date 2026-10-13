@@ -1,18 +1,16 @@
 'use strict';
 /* mapa.js — global `MapaTormenta`.
- *  - crear()    → mapa Leaflet de la vista tormenta con IMÁGENES SATELITALES
+ *  crear() → mapa Leaflet de la vista tormenta con IMÁGENES SATELITALES
  *                 reales (Esri World Imagery, sin API key): trayectoria con
- *                 «carril» oscuro + pálido para contraste sobre satélite,
- *                 tocatierras con etiqueta, marcador = img/hurricane.png
- *                 escalado por viento (kt) con tamaño aparente CONSISTENTE
- *                 con el zoom del mapa y con halo por categoría, y la API
- *                 de coreografía de zoom (C4): zoomInicio / seguir /
- *                 panorama, usados SOLO durante el playback.
- *  - crearMini()→ mini-mapa Leaflet NO interactivo para cada ficha de la
- *                 galería: mismas teselas satelitales (sin atribución propia —
- *                 el pie de la galería la declara UNA sola vez), polyline
- *                 coloreada por cat_ss con carril de contraste, marcas de
- *                 tocatierra y fitBounds del trayecto (padding 8 px).
+ *                 «carril» de contorno oscuro + interior ADAPTATIVO por
+ *                 categoría para contraste sobre satélite, tocatierras con
+ *                 etiqueta, marcador = img/hurricane.png escalado por viento
+ *                 (kt) con tamaño aparente CONSISTENTE con el zoom del mapa
+ *                 y con halo por categoría, y la API de coreografía de zoom
+ *                 (C4): zoomInicio / seguir / panorama, usados SOLO durante
+ *                 el playback.
+ *  (V2: ya no hay mini-mapas — la galería desapareció; la vista tormenta
+ *  es la pantalla principal y su atribución vive en el pie del sitio.)
  */
 
 const MapaTormenta = {
@@ -21,11 +19,16 @@ const MapaTormenta = {
   TES_SATELITE: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   ATTR_SATELITE: 'Teselas &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, Maxar, Earthstar Geographics',
 
-  /* Colores del «carril» (contornos bajo el trazo coloreado por categoría):
-   * oscuro exterior (da contraste sobre satélite a toda la paleta semáforo)
-   * + interior casi blanco (delinea cada trazo verde→rojo; el antiguo acero
-   * pálido #7fa8b5 se fundía con el verde cat0 y el naranja cat3). */
+  /* Colores del «carril» (contornos bajo el trazo coloreado por categoría).
+   * Con la rampa de ROJOS el interior del carril pasa a ser ADAPTATIVO:
+   *  - el EXTERIOR oscuro es continuo (separa toda la paleta de la textura
+   *    del satélite, como siempre);
+   *  - el INTERIOR: pálido bajo los tramos OSCUROS (cat 3–5 — el granate lee
+   *    sobre el carril casi blanco) y oscuro bajo los tramos CLAROS (cat 0–2 —
+   *    el salmón #f2a08f se fundía con un carril pálido y con el satélite:
+   *    dentro de una ranura oscura destaca en terreno claro y oscuro). */
   CARRIL_OSCURO: '#061018',
+  CARRIL_INTERIOR_OSCURO: '#1b0a08',
   CARRIL_CLARO: '#eef5f9',
   CLARO_ETIQUETA: '#eef5f9',
 
@@ -54,25 +57,25 @@ const MapaTormenta = {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const saltarSinAnim = () => reduceMov();
 
-    /* --- trayectoria: un segmento por par de puntos, color por categoría.
-     * Debajo van DOS contornos continuos y uniformes (oscuro exterior + casi
-     * blanco interior): forman un «carril legible» alrededor de todo el trazado
-     * y dan contraste a la paleta semáforo (verde→rojo) sobre la textura del
-     * satélite sin el efecto «oruga» de contornos por segmento. --- */
+    /* --- trayectoria: un segmento por par de puntos, color por categoría
+     * (rampa de rojos: más cat, más oscuro). Debajo va el carril: contorno
+     * EXTERIOR oscuro continuo + contorno INTERIOR por TRAMO adaptativo
+     * (pálido para cat 3–5, oscuro para cat 0–2 — ver colores arriba). --- */
     const maxPeso = 3 + 4 * 0.8; // peso del tramo de cat 5
     const coordsTrazo = puntos.map(p => [p.lat, p.lon]);
     L.polyline(coordsTrazo, {
       color: this.CARRIL_OSCURO, weight: maxPeso + 4, opacity: 0.95,
       lineJoin: 'round', lineCap: 'round', interactive: false
     }).addTo(mapa);
-    L.polyline(coordsTrazo, {
-      color: this.CARRIL_CLARO, weight: maxPeso + 2, opacity: 0.92,
-      lineJoin: 'round', lineCap: 'round', interactive: false
-    }).addTo(mapa);
     for (let i = 0; i < puntos.length - 1; i++) {
       const p = puntos[i], q = puntos[i + 1];
       const cat = Math.max(p.cat_ss, q.cat_ss);
       const peso = 3 + cat * 0.8;
+      L.polyline([[p.lat, p.lon], [q.lat, q.lon]], {
+        color: cat >= 3 ? this.CARRIL_CLARO : this.CARRIL_INTERIOR_OSCURO,
+        weight: peso + 2, opacity: 0.92,
+        lineJoin: 'round', lineCap: 'round', interactive: false
+      }).addTo(mapa);
       L.polyline([[p.lat, p.lon], [q.lat, q.lon]], {
         color: Datos.colorCat(cat),
         weight: peso,
@@ -81,8 +84,68 @@ const MapaTormenta = {
       }).addTo(mapa);
     }
 
-    /* --- tocatierras: círculo con borde claro + etiqueta pegada --- */
-    puntos.forEach((p) => {
+    /* --- tocatierras: círculo con borde claro + etiqueta "timestamp" ---
+     * La etiqueta de cada tocatierra es informativa: fecha/hora corta + lugar
+     * + «Cat N» cuando hay NOTA emparejada desde data/notas-tocatierras.json
+     * (opción `notas`, emparejo por marca de tiempo ≤ 2 h, la más cercana);
+     * sin nota se queda la etiqueta genérica «Tocatierra» de siempre. La nota
+     * completa queda accesible al hover (tooltip flotante) y como respaldo en
+     * title/aria-label. */
+    const UMBRAL_NOTA_MS = 2 * 3600 * 1000;
+    const normalizarNotas = (lista) => (Array.isArray(lista) ? lista : [])
+      .map(n => ({
+        tMs: +new Date(n.t),
+        lugar: String(n.lugar == null ? '' : n.lugar),
+        nota: String(n.nota == null ? '' : n.nota)
+      }))
+      .filter(n => Number.isFinite(n.tMs));
+    let notasToca = normalizarNotas(opciones.notas);
+
+    /* nota más cercana a la fecha del punto (null si ninguna cae en ±2 h) */
+    const notaDe = (p) => {
+      const tp = +p.d;
+      let mejor = null;
+      let mejorDist = Infinity;
+      notasToca.forEach(n => {
+        const dist = Math.abs(n.tMs - tp);
+        if (dist < mejorDist) { mejorDist = dist; mejor = n; }
+      });
+      return (mejor && mejorDist <= UMBRAL_NOTA_MS) ? mejor : null;
+    };
+
+    const escapar = (s) => String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    /* fecha/hora corta del tocatierra: «29 ago · 11:10 UTC» */
+    const fmtHoraCorta = (d) => Datos.fmtDia(d) + ' · ' +
+      String(d.getUTCHours()).padStart(2, '0') + ':' +
+      String(d.getUTCMinutes()).padStart(2, '0') + ' UTC';
+
+    /* HTML de la etiqueta: genérica sin nota; con nota, tarjeta compacta de
+     * dos líneas (hora + Cat N / lugar) con title y aria-label de respaldo */
+    const htmlEtiqueta = (e) => {
+      if (!e.nota) return '<span class="etq-tocatierra">Tocatierra</span>';
+      const cat = Math.max(0, Math.min(5, e.p.cat_ss | 0));
+      const desc = 'Tocatierra · ' + Datos.fmtReloj(e.p.d) + ' · ' + e.nota.lugar + ' — ' + e.nota.nota;
+      return '<span class="etq-tocatierra etq-toca-nota" role="img"' +
+        ' title="' + escapar(desc) + '" aria-label="' + escapar(desc) + '">' +
+        '<span class="etq-toca-cab"><span class="etq-toca-hora">' + fmtHoraCorta(e.p.d) + '</span>' +
+        '<span class="chip chip-mini chip-intensidad chip-cat-' + cat + '">' + Datos.fmtCatCorto(cat) + '</span></span>' +
+        '<span class="etq-toca-lugar">' + escapar(e.nota.lugar) + '</span>' +
+        '</span>';
+    };
+
+    const iconoEtiqueta = (e, ax, ay) => L.divIcon({
+      className: '',
+      html: htmlEtiqueta(e),
+      iconSize: null,
+      iconAnchor: [ax, ay]
+    });
+
+    const etiquetas = [];        // {i, p, nota, marcador, ax, ay, elConectado}
+    const porIndice = new Map(); // índice de punto → etiqueta (solo tocatierras)
+
+    puntos.forEach((p, i) => {
       if (!p.tocatierra) return;
       L.circleMarker([p.lat, p.lon], {
         radius: 8,
@@ -95,19 +158,112 @@ const MapaTormenta = {
       }).addTo(mapa);
       /* Etiqueta SIEMPRE por encima del marcador del huracán: con el ícono de
        * hasta ~280 px, el zIndexOffset 400 del marcador taparía la etiqueta;
-       * 2000 domina cualquier distancia vertical en píxeles del encuadre. */
-      L.marker([p.lat, p.lon], {
+       * 2000 domina cualquier distancia vertical en píxeles del encuadre
+       * (dentro del propio panel de marcadores: contador y reloj-mapa viven
+       * en un z-index DOM superior y nunca quedan tapados). */
+      const e = { i: i, p: p, nota: notaDe(p), marcador: null, ax: 0, ay: 22, elConectado: null };
+      e.marcador = L.marker([p.lat, p.lon], {
         interactive: false,
         keyboard: false,
         zIndexOffset: 2000,
-        icon: L.divIcon({
-          className: '',
-          html: '<span class="etq-tocatierra">Tocatierra</span>',
-          iconSize: null,
-          iconAnchor: [0, 22]
-        })
+        icon: iconoEtiqueta(e, e.ax, e.ay)
       }).addTo(mapa);
+      etiquetas.push(e);
+      porIndice.set(i, e);
     });
+
+    /* --- tooltip flotante de la NOTA (hover sobre la etiqueta): vidrio
+     * oscuro como la leyenda, no captura el puntero --- */
+    const notaTip = document.createElement('div');
+    notaTip.className = 'nota-tocatierra oculto';
+    notaTip.setAttribute('role', 'tooltip');
+    contenedor.appendChild(notaTip);
+
+    const ocultarNota = () => { notaTip.classList.add('oculto'); };
+
+    const mostrarNota = (e, ev) => {
+      if (!e.nota || !ev) return;
+      const cat = Math.max(0, Math.min(5, e.p.cat_ss | 0));
+      notaTip.innerHTML =
+        '<p class="nt-cab"><span>' + Datos.fmtReloj(e.p.d) + '</span>' +
+        '<span class="chip chip-mini chip-intensidad chip-cat-' + cat + '">' + Datos.fmtCatCorto(cat) + '</span></p>' +
+        '<p class="nt-lugar">' + escapar(e.nota.lugar) + '</p>' +
+        '<p class="nt-nota">' + escapar(e.nota.nota) + '</p>';
+      notaTip.classList.remove('oculto');
+      const ancho = notaTip.offsetWidth || 260;
+      const alto = notaTip.offsetHeight || 110;
+      let x = ev.clientX + 16;
+      let y = ev.clientY + 14;
+      if (x + ancho > window.innerWidth - 8) x = ev.clientX - ancho - 12;
+      if (y + alto > window.innerHeight - 8) y = ev.clientY - alto - 12;
+      notaTip.style.left = Math.max(8, x) + 'px';
+      notaTip.style.top = Math.max(8, y) + 'px';
+    };
+
+    /* Engancha los eventos propios de la etiqueta al elemento que Leaflet
+     * tenga montado ahora (setIcon los recrea). El hover abre el tooltip de
+     * la nota y el clic fija la ficha, igual que el círculo del punto. */
+    const conectarEtiqueta = (e) => {
+      const el = e.marcador.getElement();
+      if (!el || el === e.elConectado) return;
+      e.elConectado = el;
+      if (!e.nota) return;
+      el.addEventListener('mouseenter', (ev) => mostrarNota(e, ev));
+      el.addEventListener('mouseleave', ocultarNota);
+      el.addEventListener('click', () => { ocultarNota(); opciones.alHacerClicEnPunto(e.i); });
+    };
+
+    /* Sin solapes entre etiquetas: en orden temporal, cada una prueba
+     * posiciones cercanas (arriba → abajo → derecha → izquierda) y, si un
+     * racimo las agota, niveles extra de apilado vertical; toma la primera
+     * que no pise a las ya puestas ni se salga del encuadre y, en el peor
+     * caso, la de menor solape. Se recalcula con el encuadre base (zoomBase),
+     * donde el riesgo de solape es mayor: al acercar, los puntos se separan y
+     * las etiquetas (tamaño fijo en pantalla) no vuelven a juntarse. */
+    const acomodarEtiquetas = () => {
+      const tam = mapa.getSize();
+      const puestas = [];
+      etiquetas.forEach((e) => {
+        const el = e.marcador.getElement();
+        if (!el) return;
+        const w = el.offsetWidth || 150;
+        const h = el.offsetHeight || 18;
+        const c = mapa.latLngToContainerPoint([e.p.lat, e.p.lon]);
+        const cands = [
+          { ax: w / 2, ay: h + 8 },        // encima
+          { ax: w / 2, ay: -8 },           // debajo
+          { ax: -10, ay: h / 2 },          // derecha
+          { ax: w + 10, ay: h / 2 },       // izquierda
+          { ax: w / 2, ay: 2 * h + 14 },   // encima, 2.º nivel
+          { ax: w / 2, ay: -(h + 14) },    // debajo, 2.º nivel
+          { ax: w / 2, ay: 3 * h + 20 },   // encima, 3.er nivel
+          { ax: w / 2, ay: -(2 * h + 20) } // debajo, 3.er nivel
+        ];
+        const rects = cands.map(cd => ({ x: c.x - cd.ax, y: c.y - cd.ay, w: w + 6, h: h + 4 }));
+        const choca = r => puestas.some(q => !(r.x + r.w <= q.x || q.x + q.w <= r.x ||
+          r.y + r.h <= q.y || q.y + q.h <= r.y));
+        const solape = r => puestas.reduce((acc, q) => {
+          const dx = Math.min(r.x + r.w, q.x + q.w) - Math.max(r.x, q.x);
+          const dy = Math.min(r.y + r.h, q.y + q.h) - Math.max(r.y, q.y);
+          return acc + (dx > 0 && dy > 0 ? dx * dy : 0);
+        }, 0);
+        const dentro = r => r.x >= 2 && r.y >= 2 && r.x + r.w <= tam.x + 4 && r.y + r.h <= tam.y + 4;
+        let k = rects.findIndex(r => !choca(r) && dentro(r));
+        if (k < 0) k = rects.findIndex(r => !choca(r));
+        if (k < 0) { // racimo saturado: la posición de menor solape
+          k = 0;
+          let minSolape = Infinity;
+          rects.forEach((r, j) => { const s = solape(r); if (s < minSolape) { minSolape = s; k = j; } });
+        }
+        puestas.push(rects[k]);
+        const cd = cands[k];
+        if (e.ax !== cd.ax || e.ay !== cd.ay) {
+          e.ax = cd.ax; e.ay = cd.ay;
+          e.marcador.setIcon(iconoEtiqueta(e, e.ax, e.ay)); // recrea el icono
+        }
+        conectarEtiqueta(e);
+      });
+    };
 
     /* --- zona de hover: círculos invisibles por punto (tooltip + clic propios) --- */
     const capturas = puntos.map((p, i) =>
@@ -241,6 +397,7 @@ const MapaTormenta = {
       zoomBase = mapa.getZoom();
       mapa.options.zoomSnap = anterior; // grid normal para la interacción
       refrescarTamanoZoom(); // el encuadre fija el tamaño base de referencia
+      acomodarEtiquetas();   // y la posición sin solapes de las etiquetas
     };
     encajar();
 
@@ -252,6 +409,26 @@ const MapaTormenta = {
       mapa: mapa,
 
       getZoom() { return mapa.getZoom(); },
+
+      /* Re-empareja y repinta las etiquetas si las notas llegan después de
+       * crear el mapa (la app normalmente ya las pasa en `crear`, opción
+       * `notas`). */
+      setNotas(nuevas) {
+        notasToca = normalizarNotas(nuevas);
+        etiquetas.forEach(e => {
+          e.nota = notaDe(e.p);
+          e.marcador.setIcon(iconoEtiqueta(e, e.ax, e.ay));
+        });
+        ocultarNota();
+        acomodarEtiquetas();
+      },
+
+      /* Nota emparejada con el tocatierra de índice i (o null): la ficha
+       * abierta al clic la usa para incluir la explicación. */
+      notaDePunto(i) {
+        const e = porIndice.get(i);
+        return e && e.nota ? e.nota : null;
+      },
 
       /* Mueve el marcador al punto EXACTO i (hover, scrub, ficha, clic, pausa). */
       setPuntoActivo(i) {
@@ -342,77 +519,10 @@ const MapaTormenta = {
       },
 
       destruir() {
+        ocultarNota();
+        if (notaTip.parentNode) notaTip.parentNode.removeChild(notaTip);
         mapa.remove();
       }
-    };
-  },
-
-  /* ---------- mini-mapa Leaflet para cada ficha de la galería (C2) ----------
-   * Mapa satelital REAL y no interactivo: misma tesela satelital del resto del
-   * sitio, polyline de la trayectoria coloreada por cat_ss (con carril de
-   * contraste), marcas de tocatierra y fitBounds del trayecto (padding 8 px).
-   * Sin atribución por ficha: el pie de la galería la declara una sola vez. */
-  crearMini(contenedor, puntos) {
-    const mapa = L.map(contenedor, {
-      zoomControl: false,
-      attributionControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      touchZoom: false,
-      trackResize: false,
-      inertia: false,
-      zoomSnap: 0.25
-    });
-
-    L.tileLayer(this.TES_SATELITE, { maxZoom: 19 }).addTo(mapa);
-
-    const coords = puntos.map(p => [p.lat, p.lon]);
-    const gMax = 2.2 + 5 * 0.42; // grosor del tramo de cat 5
-    L.polyline(coords, {
-      color: this.CARRIL_OSCURO, weight: gMax + 3, opacity: 0.92,
-      lineJoin: 'round', lineCap: 'round', interactive: false
-    }).addTo(mapa);
-    L.polyline(coords, {
-      color: this.CARRIL_CLARO, weight: gMax + 1.5, opacity: 0.85,
-      lineJoin: 'round', lineCap: 'round', interactive: false
-    }).addTo(mapa);
-    for (let i = 0; i < puntos.length - 1; i++) {
-      const p = puntos[i], q = puntos[i + 1];
-      const cat = Math.max(p.cat_ss, q.cat_ss);
-      L.polyline([[p.lat, p.lon], [q.lat, q.lon]], {
-        color: Datos.colorCat(cat),
-        weight: 2.2 + cat * 0.42,
-        opacity: 0.96,
-        interactive: false
-      }).addTo(mapa);
-    }
-
-    puntos.forEach((p) => {
-      if (!p.tocatierra) return;
-      L.circleMarker([p.lat, p.lon], {
-        radius: 3.5,
-        color: this.CLARO_ETIQUETA,
-        weight: 1.4,
-        opacity: 0.95,
-        fillColor: Datos.colorCat(p.cat_ss),
-        fillOpacity: 0.9,
-        interactive: false
-      }).addTo(mapa);
-    });
-
-    const encajar = () => {
-      mapa.invalidateSize({ animate: false });
-      mapa.fitBounds(L.latLngBounds(coords), { padding: [8, 8], animate: false });
-    };
-    encajar();
-
-    return {
-      mapa: mapa,
-      reencuadrar() { encajar(); },
-      destruir() { mapa.remove(); }
     };
   }
 };
