@@ -33,8 +33,11 @@ SUPUESTOS / DECISIONES (contrastados con el CSV real de 492 filas / 10 tormentas
    Se registran 34 tocatierras en total (HURDAT2 marca cualquier tocatierra,
    no solo EE. UU.).
 7. Muertes y daños del CSV son valores POR DÍA repetidos en cada punto de ese día.
-   Se acumulan UNA sola vez por fecha, en el primer punto cronológico de la fecha;
-   el resto de puntos de la fecha mantienen el acumulado. Valores vacíos = 0.
+   Se acumulan UNA sola vez por fecha: EN EL PUNTO DEL TOCATIERRA si esa fecha tiene
+   alguno, y si no, en el primer punto cronológico de la fecha. El resto de puntos
+   de la fecha mantienen el acumulado. Valores vacíos = 0.
+   (Las fechas de muertes de NOAA son días locales SIN hora; acumular a las 00:00Z
+   hacía que las muertes aparecieran horas ANTES del tocatierra que las causó.)
    Si una misma fecha tuviera valores distintos entre filas (no ocurre en este
    CSV), se usa el de la fila más temprana y se emite un aviso por stderr.
    - muertes_acum: int, redondeo sobre el acumulado (no sobre cada delta), de modo
@@ -68,6 +71,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 CSV_FUENTE = RAIZ / "notebooks" / "hurricanes_unido.csv"
 DIR_TORMENTAS = RAIZ / "data" / "tormentas"
 RUTA_INDICE = RAIZ / "data" / "indice.json"
+RUTA_NOTAS = RAIZ / "data" / "notas-tocatierras.json"
 
 NOTA = "Dataset final — fuentes en data/SOURCES.md"
 
@@ -177,8 +181,43 @@ def indice_mas_cercano(tiempos, objetivo):
 
 # -------------------------------------------------------------- conversión
 
-def convertir_tormenta(filas):
+def cargar_marcas_tocatierra():
+    """Marcas de tocatierra CURADAS que dibuja la app (data/notas-tocatierras.json).
+
+    Se usan para que el salto diario de muertes caiga exactamente en el tocatierra
+    que lo causó. Hace falta porque HURDAT2 marca como tocatierra puntos que la app
+    no muestra (p. ej. Ian tiene uno a las 02:00Z del 28 sep, mientras el tocatierra
+    real en Florida es a las 19:05Z), y las muertes caerían en el punto equivocado.
+
+    Devuelve {id_tormenta: {datetime}}; vacío si el fichero no existe.
+    """
+    if not RUTA_NOTAS.exists():
+        print(f"  AVISO: no existe {RUTA_NOTAS}; se usa el primer tocatierra de HURDAT2",
+              file=sys.stderr)
+        return {}
+    crudo = json.load(RUTA_NOTAS.open(encoding="utf-8"))
+    marcas = {}
+    for tid, notas in crudo.items():
+        conjunto = set()
+        for n in notas:
+            txt = n["t"].rstrip("Z")
+            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+                try:
+                    conjunto.add(datetime.strptime(txt, fmt))
+                    break
+                except ValueError:
+                    continue
+            else:
+                print(f"  AVISO: marca ilegible {n['t']} en {tid}", file=sys.stderr)
+        marcas[tid] = conjunto
+    return marcas
+
+
+def convertir_tormenta(filas, marcas_por_tormenta=None):
     """Convierte las filas de UNA tormenta en el documento JSON final.
+
+    `marcas_por_tormenta` es {id_tormenta: {datetime}} con los tocatierras curados
+    que muestra la app.
 
     Devuelve (doc, resumen) donde resumen alimenta data/indice.json y la
     autovalidación.
@@ -187,6 +226,7 @@ def convertir_tormenta(filas):
     storm = filas[0]["storm"]
     sid = filas[0]["storm_id"]
     tid = id_tormenta(storm, sid)
+    marcas = (marcas_por_tormenta or {}).get(tid, set())
 
     # Timestamps: se exige unicidad porque la app une por marca de tiempo.
     tiempos = [fecha_hora(f) for f in filas]
@@ -194,18 +234,37 @@ def convertir_tormenta(filas):
         repetidos = sorted({t for t in tiempos if tiempos.count(t) > 1})
         raise SystemExit(f"ERROR {tid}: timestamps duplicados: {repetidos}")
 
+    # Punto donde se acumulan los impactos de cada fecha.
+    # Prioridad: 1) el punto que coincide con un tocatierra CURADO que dibuja la app,
+    # 2) el primer tocatierra de HURDAT2 de esa fecha, 3) el primer punto de la fecha.
+    # Así el salto de muertes cae exactamente en el tocatierra que lo causó: las
+    # fechas de muertes de NOAA son días locales SIN hora y, sin esto, el acumulado
+    # saltaba a las 00:00Z, horas ANTES del tocatierra.
+    def prioridad(i):
+        if tiempos[i] in marcas:
+            return 2
+        if filas[i]["is_landfall"].strip() == "True":
+            return 1
+        return 0
+
+    acumular_en = {}
+    for i, fila in enumerate(filas):
+        fecha = fila["date"]
+        actual = acumular_en.get(fecha)
+        if actual is None or prioridad(i) > prioridad(actual):
+            acumular_en[fecha] = i
+
     puntos = []
     muertes = 0.0        # acumulado en float; se redondea al emitir
     danos = 0.0
-    fecha_previa = None
     totales_por_fecha = {}   # validación: {fecha: (muertes, daños)} una vez por fecha
 
-    for fila, t in zip(filas, tiempos):
+    for i, (fila, t) in enumerate(zip(filas, tiempos)):
         viento = a_int(fila["wind_kt"])
         fecha = fila["date"]
 
-        # Impactos: deltas diarios UNA vez por fecha (primer punto cronológico).
-        if fecha != fecha_previa:
+        # Impactos: deltas diarios UNA vez por fecha, en su punto de acumulación.
+        if i == acumular_en[fecha]:
             m_dia = a_float(fila["deaths_direct"]) + a_float(fila["deaths_indirect"])
             d_dia = a_float(fila["damage_property_usd"]) + a_float(fila["damage_crops_usd"])
             # Consistencia dentro del día (en este CSV siempre se repiten igual).
@@ -219,7 +278,6 @@ def convertir_tormenta(filas):
                         break
             muertes += m_dia
             danos += d_dia
-            fecha_previa = fecha
             totales_por_fecha[fecha] = (m_dia, d_dia)
 
         # ir: contra el punto más cercano a t-24 h (por marca de tiempo).
@@ -339,9 +397,11 @@ def main():
 
     DIR_TORMENTAS.mkdir(parents=True, exist_ok=True)
 
+    marcas_por_tormenta = cargar_marcas_tocatierra()
+
     docs, resumenes = {}, {}
     for sid in sorted(por_tormenta):
-        doc, res = convertir_tormenta(por_tormenta[sid])
+        doc, res = convertir_tormenta(por_tormenta[sid], marcas_por_tormenta)
         docs[doc["id"]] = doc
         resumenes[doc["id"]] = res
 

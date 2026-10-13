@@ -1,0 +1,18 @@
+Cobertura de Storm Events (solo EE. UU.) frente al total verificado del NHC.
+
+La forma diaria (cuándo murió la gente) sale de aquí; el total que se
+muestra sale del NHC. Por eso la cobertura no llega al 100 %: no es un
+error, es la diferencia entre «cuántos» (NHC) y «cuándo» (Storm Events).
+
+tormenta   episodios  eventos  días  víctimas    NHC   cob.
+--------------------------------------------------------------
+KATRINA           61      524     4      1007   1392    72%
+IKE               76      783     6        60    195    31%
+SANDY            103      949    11       138    234    59%
+HARVEY            51      480    11       129    103   125%
+IRMA              34      509    15        80    128    62%
+MARIA              2       53     1        20   3022     1%
+MICHAEL           54      732     2        58     59    98%
+IDA               87      903    11        88     87   101%
+IAN               43      339    13       148    156    95%
+HELENE            77     1041     5       184    250    74%

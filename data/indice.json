@@ -7,8 +7,17 @@
    "nombre": "Katrina",
    "anio": 2005,
    "cat_pico": 5,
-   "muertes_total": 1004,
+   "muertes_total": 1392,
    "danos_total_usd": 33598443000,
+   "mock": false
+  },
+  {
+   "id": "maria-2017",
+   "nombre": "María",
+   "anio": 2017,
+   "cat_pico": 5,
+   "muertes_total": 302,
+   "danos_total_usd": 18263750000,
    "mock": false
   },
   {
@@ -16,17 +25,8 @@
    "nombre": "Helene",
    "anio": 2024,
    "cat_pico": 4,
-   "muertes_total": 184,
+   "muertes_total": 250,
    "danos_total_usd": 11333850170,
-   "mock": false
-  },
-  {
-   "id": "ian-2022",
-   "nombre": "Ian",
-   "anio": 2022,
-   "cat_pico": 5,
-   "muertes_total": 146,
-   "danos_total_usd": 16447080500,
    "mock": false
   },
   {
@@ -34,17 +34,26 @@
    "nombre": "Sandy",
    "anio": 2012,
    "cat_pico": 3,
-   "muertes_total": 136,
+   "muertes_total": 234,
    "danos_total_usd": 25250354920,
    "mock": false
   },
   {
-   "id": "ida-2021",
-   "nombre": "Ida",
-   "anio": 2021,
+   "id": "ike-2008",
+   "nombre": "Ike",
+   "anio": 2008,
    "cat_pico": 4,
-   "muertes_total": 88,
-   "danos_total_usd": 13253659210,
+   "muertes_total": 195,
+   "danos_total_usd": 16990889090,
+   "mock": false
+  },
+  {
+   "id": "ian-2022",
+   "nombre": "Ian",
+   "anio": 2022,
+   "cat_pico": 5,
+   "muertes_total": 156,
+   "danos_total_usd": 16447080500,
    "mock": false
   },
   {
@@ -52,7 +61,7 @@
    "nombre": "Irma",
    "anio": 2017,
    "cat_pico": 5,
-   "muertes_total": 79,
+   "muertes_total": 128,
    "danos_total_usd": 4653936400,
    "mock": false
   },
@@ -61,17 +70,17 @@
    "nombre": "Harvey",
    "anio": 2017,
    "cat_pico": 4,
-   "muertes_total": 78,
+   "muertes_total": 103,
    "danos_total_usd": 51319256500,
    "mock": false
   },
   {
-   "id": "ike-2008",
-   "nombre": "Ike",
-   "anio": 2008,
+   "id": "ida-2021",
+   "nombre": "Ida",
+   "anio": 2021,
    "cat_pico": 4,
-   "muertes_total": 60,
-   "danos_total_usd": 16990889090,
+   "muertes_total": 87,
+   "danos_total_usd": 13253659210,
    "mock": false
   },
   {
@@ -81,15 +90,6 @@
    "cat_pico": 5,
    "muertes_total": 59,
    "danos_total_usd": 15849412550,
-   "mock": false
-  },
-  {
-   "id": "maria-2017",
-   "nombre": "María",
-   "anio": 2017,
-   "cat_pico": 5,
-   "muertes_total": 20,
-   "danos_total_usd": 18263750000,
    "mock": false
   }
  ]

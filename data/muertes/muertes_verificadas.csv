@@ -1,0 +1,11 @@
+tormenta,anio,muertes_directas,muertes_indirectas,muertes_indeterminadas,muertes_total,informe_tcr,url_tcr,nota
+Katrina,2005,520,565,307,1392,AL122005,https://www.nhc.noaa.gov/data/tcr/AL122005_Katrina.pdf,520 directas + 565 indirectas + 307 de causa indeterminada (Rappaport 2014; Rappaport y Blanchard 2016)
+Ike,2008,103,92,0,195,AL092008,https://www.nhc.noaa.gov/data/tcr/AL092008_Ike.pdf,El TCR publica 103 directas (74 en Haití); el total añade las indirectas
+Sandy,2012,147,87,0,234,AL182012,https://www.nhc.noaa.gov/data/tcr/AL182012_Sandy.pdf,147 directas en la cuenca + 87 indirectas en EE. UU.
+Harvey,2017,68,35,0,103,AL092017,https://www.nhc.noaa.gov/data/tcr/AL092017_Harvey.pdf,68 directas en Texas (todas en EE. UU.) + «about 35» indirectas
+Irma,2017,46,82,0,128,AL112017,https://www.nhc.noaa.gov/data/tcr/AL112017_Irma.pdf,46 directas en el Caribe y EE. UU. + 82 indirectas en EE. UU.
+Maria,2017,3022,0,0,3022,AL152017,https://www.nhc.noaa.gov/data/tcr/AL152017_Maria.pdf,"Puerto Rico 2 975 (directas+indirectas, estudio GWU 2018) + 47 en el resto del Caribe y EE. UU. El TCR no separa directas de indirectas en Puerto Rico"
+Michael,2018,16,43,0,59,AL142018,https://www.nhc.noaa.gov/data/tcr/AL142018_Michael.pdf,"16 directas + 43 indirectas, todas en EE. UU."
+Ida,2021,55,32,0,87,AL092021,https://www.nhc.noaa.gov/data/tcr/AL092021_Ida.pdf,55 directas + 32 indirectas en EE. UU.
+Ian,2022,66,90,0,156,AL092022,https://www.nhc.noaa.gov/data/tcr/AL092022_Ian.pdf,156 en EE. UU. (66 directas + 90 indirectas); el TCR añade 5 muertes más en Cuba
+Helene,2024,175,75,0,250,AL092024,https://www.nhc.noaa.gov/data/tcr/AL092024_Helene.pdf,El TCR da el total: «at least 250 fatalities (including at least 175 direct deaths)» en EE. UU.
