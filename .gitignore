@@ -21,3 +21,5 @@ __pycache__/
 prompt.md
 Pasted image.png
 notebooks/.~lock*
+
+*.webp
