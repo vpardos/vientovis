@@ -68,10 +68,22 @@ PDFs directos (todos verificados 200 OK):
 
 ### Muertes y daños en formato tabular
 
-En lugar de extraer de los PDF, usar el NCEI Billion-Dollar Weather & Climate Disasters:
+**El NCEI Billion-Dollar Weather & Climate Disasters ya NO sirve**: NOAA
+descontinuó el producto en mayo de 2025 y todas las rutas `/access/billions/...`
+devuelven 404 (comprobado en octubre de 2026). La web apunta ahora a
+`/monitoring-content/billions`, sin CSV descargable.
 
-- https://www.ncei.noaa.gov/access/billions/ — CSV/JSON por evento con muertes,
-  heridos y costo (nominal y ajustado por inflación, método CPI).
+Las cifras verificadas de este proyecto están por tanto extraídas **a mano de los
+PDF de los TCR** y recogidas en:
+
+- `data/muertes/README.md` — muertes: fuente, método y advertencias.
+- `data/danos/README.md` — daños: fuente, método y advertencias.
+- `data/muertes/muertes_verificadas.csv` y `data/danos/danos_verificados.csv` —
+  las tablas, con la cita y la URL de cada informe.
+
+Para las **muertes individuales con fecha** (que es lo que permite una curva diaria
+real) sí hay un fichero masivo de NOAA, el de víctimas de Storm Events:
+https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/
 
 ## Población
 

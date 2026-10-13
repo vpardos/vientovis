@@ -8,7 +8,7 @@
    "anio": 2005,
    "cat_pico": 5,
    "muertes_total": 1392,
-   "danos_total_usd": 33598443000,
+   "danos_total_usd": 125000000000,
    "mock": false
   },
   {
@@ -17,7 +17,7 @@
    "anio": 2017,
    "cat_pico": 5,
    "muertes_total": 302,
-   "danos_total_usd": 18263750000,
+   "danos_total_usd": 91430000000,
    "mock": false
   },
   {
@@ -26,7 +26,7 @@
    "anio": 2024,
    "cat_pico": 4,
    "muertes_total": 250,
-   "danos_total_usd": 11333850170,
+   "danos_total_usd": 78700000000,
    "mock": false
   },
   {
@@ -35,7 +35,7 @@
    "anio": 2012,
    "cat_pico": 3,
    "muertes_total": 234,
-   "danos_total_usd": 25250354920,
+   "danos_total_usd": 52880000000,
    "mock": false
   },
   {
@@ -44,7 +44,7 @@
    "anio": 2008,
    "cat_pico": 4,
    "muertes_total": 195,
-   "danos_total_usd": 16990889090,
+   "danos_total_usd": 33145000000,
    "mock": false
   },
   {
@@ -53,7 +53,7 @@
    "anio": 2022,
    "cat_pico": 5,
    "muertes_total": 156,
-   "danos_total_usd": 16447080500,
+   "danos_total_usd": 112900000000,
    "mock": false
   },
   {
@@ -62,7 +62,7 @@
    "anio": 2017,
    "cat_pico": 5,
    "muertes_total": 128,
-   "danos_total_usd": 4653936400,
+   "danos_total_usd": 53095000000,
    "mock": false
   },
   {
@@ -71,7 +71,7 @@
    "anio": 2017,
    "cat_pico": 4,
    "muertes_total": 103,
-   "danos_total_usd": 51319256500,
+   "danos_total_usd": 125000000000,
    "mock": false
   },
   {
@@ -80,7 +80,7 @@
    "anio": 2021,
    "cat_pico": 4,
    "muertes_total": 87,
-   "danos_total_usd": 13253659210,
+   "danos_total_usd": 75250000000,
    "mock": false
   },
   {
@@ -89,7 +89,7 @@
    "anio": 2018,
    "cat_pico": 5,
    "muertes_total": 59,
-   "danos_total_usd": 15849412550,
+   "danos_total_usd": 25000000000,
    "mock": false
   }
  ]
