@@ -1,5 +1,5 @@
 'use strict';
-/* app.js — global `App`: routing por hash y PANTALLA PRINCIPAL (V2).
+/* app.js — global `App`: routing por hash y PANTALLA PRINCIPAL (V3).
  * La visualización de tormenta ES la portada: héroe compacto (título,
  * descripción y frase editorial «potencia ≠ destructividad» computada del
  * índice), un selector de huracanes ordenado por MUERTES y, debajo, la vista
@@ -9,6 +9,11 @@
  * cambia de huracán SIN recargar (solo re-render de la vista) y reescribe el
  * hash con history.replaceState para conservar los enlaces profundos.
  * El reproductor avanza SIEMPRE a ×0,25 (un punto de 6 h cada 2 s reales). */
+
+/* Factor exacto kt → km/h (1 kt = 1,852 km/h). Se usa SOLO en el overlay
+ * `#viento-mapa`; el resto de la app (línea de valores, paneles, ficha,
+ * leyenda y notas) sigue mostrando nudos. */
+const KT_A_KMH = 1.852;
 
 const App = {
 
@@ -276,6 +281,13 @@ const App = {
     s.lineaInicio = this._lineaInicioSucesos(s);
     s.sucesos = this._construirSucesos(s);
 
+    /* cabecera: la cifra de daños se parte en VALOR fuerte + unidad en gris
+     * («mil M» / «M») + etiqueta («daños»), para que la unidad nunca se funda
+     * con la etiqueta en una sola corrida («$125 mil M daños»). */
+    const danosCab = Datos.fmtUSDCorto(meta.danos_total_usd);
+    const mDanos = /^(\$[\d.,]+)\s*(.*)$/.exec(danosCab) || [danosCab, danosCab, ''];
+    const unidadDanos = String(mDanos[2] || '').trim();
+
     raiz.innerHTML =
       '<section class="tormenta">' +
       '<div class="tormenta-cabecera">' +
@@ -283,7 +295,9 @@ const App = {
       '<span class="chip chip-intensidad chip-cat-' + meta.cat_pico + '">Cat ' + meta.cat_pico + '</span>' +
       '<div class="tormenta-stats mono">' +
       '<span class="ts-item"><b>' + Datos.fmtEntero(meta.muertes_total) + '</b> muertes</span>' +
-      '<span class="ts-item"><b>' + Datos.fmtUSDCorto(meta.danos_total_usd) + '</b> daños</span>' +
+      '<span class="ts-item"><b>' + mDanos[1] + '</b>' +
+      (unidadDanos ? '<span class="ts-unidad">' + unidadDanos + '</span>' : '') +
+      ' daños</span>' +
       '<span class="ts-item"><b>' + tocas.length + '</b> tocatier' + (tocas.length === 1 ? 'ra' : 'ras') + '</span>' +
       '<span class="ts-item"><b>' + tramosIR.length + '</b> tramo' + (tramosIR.length === 1 ? '' : 's') + ' IR</span>' +
       '</div>' +
@@ -303,6 +317,12 @@ const App = {
       '<div class="tormenta-cuerpo">' +
       '<div class="tormenta-mapa" id="tor-mapa">' +
       '<div class="reloj-mapa" id="reloj-mapa" role="group" aria-label="Fecha y hora UTC del punto activo">' + Datos.fmtReloj(puntos[0].d) + '</div>' +
+      /* intensidad + viento del punto activo: overlay superior central, misma
+       * vía de actualización que contador/reloj (_actualizarPunto). Aquí el
+       * viento se muestra en km/h (no en kt). */
+      '<div class="viento-mapa" id="viento-mapa" role="group" aria-label="Categoría y viento en km/h del punto activo">' +
+      '<span id="vm-cat"></span><span class="vm-sep" aria-hidden="true">·</span><span id="vm-kt">—</span>' +
+      '</div>' +
       '<div class="contador-impacto" id="contador-impacto" role="group" aria-label="Acumulados del punto activo">' +
       '<div class="ci-fila"><span class="ci-etq">Muertes:</span><span class="ci-cifra ci-muertes" id="ci-muertes">—</span></div>' +
       '<div class="ci-fila"><span class="ci-etq">Daños:</span><span class="ci-cifra ci-danos" id="ci-danos">—</span></div>' +
@@ -315,9 +335,14 @@ const App = {
        * huracán con índice ≤ el punto activo (misma vía que contador/reloj-mapa:
        * _actualizarPunto) */
       '<div class="ticker-noticias" id="ticker" role="group" aria-label="Última actualización del huracán">' +
-      '<span class="ticker-chip mono"><i class="ticker-punto" aria-hidden="true"></i>En vivo</span>' +
-      '<span class="ticker-cuerpo"><span class="ticker-texto" id="ticker-texto"></span></span>' +
+      '<span class="ticker-chip mono" id="ticker-chip"><i class="ticker-punto" aria-hidden="true"></i><span id="ticker-chip-texto">En pausa</span></span>' +
+      '<span class="ticker-cuerpo" id="ticker-cuerpo"><span class="ticker-texto" id="ticker-texto" role="note" tabindex="0"></span></span>' +
       '</div>' +
+      /* tooltip del MENSAJE COMPLETO del ticker (hover/foco del texto): mismo
+       * vidrio que .nota-tocatierra, anclado SOBRE la barra dentro del mapa y
+       * sin capturar el puntero; el texto completo vive también en aria-label */
+      '<div class="nota-tocatierra ticker-tip oculto" id="ticker-tip" aria-hidden="true">' +
+      '<p class="nt-nota" id="ticker-tip-texto"></p></div>' +
       '<div class="ficha-flotante oculto" id="ficha" role="group" aria-label="Ficha del punto activo">' +
       '<div class="ficha-cab"><h3 class="ficha-titulo">Ficha del punto</h3>' +
       '<button type="button" id="btn-cerrar-ficha" class="ficha-cerrar" aria-label="Cerrar ficha" title="Cerrar ficha">✕</button></div>' +
@@ -380,7 +405,24 @@ const App = {
     const scrubber = document.getElementById('scrubber');
     const repValores = document.getElementById('rep-valores');
 
-    this._refs = { btnPlay: btnPlay, scrubber: scrubber, repValores: repValores, relojMapa: document.getElementById('reloj-mapa'), tickerTexto: document.getElementById('ticker-texto'), ficha: document.getElementById('ficha'), fichaCuerpo: document.getElementById('ficha-cuerpo'), ciMuertes: document.getElementById('ci-muertes'), ciDanos: document.getElementById('ci-danos') };
+    this._refs = { btnPlay: btnPlay, scrubber: scrubber, repValores: repValores, relojMapa: document.getElementById('reloj-mapa'), vmCat: document.getElementById('vm-cat'), vmKt: document.getElementById('vm-kt'), tickerTexto: document.getElementById('ticker-texto'), tickerCuerpo: document.getElementById('ticker-cuerpo'), tickerChip: document.getElementById('ticker-chip'), tickerChipTexto: document.getElementById('ticker-chip-texto'), tickerTip: document.getElementById('ticker-tip'), tickerTipTexto: document.getElementById('ticker-tip-texto'), ficha: document.getElementById('ficha'), fichaCuerpo: document.getElementById('ficha-cuerpo'), ciMuertes: document.getElementById('ci-muertes'), ciDanos: document.getElementById('ci-danos') };
+
+    /* Tooltip del mensaje completo del ticker: hover sobre la zona del texto
+     * (la barra entera, chip incluido, sigue sin capturar clics) y foco de
+     * teclado del propio texto truncado. */
+    if (this._refs.tickerCuerpo) {
+      const cuerpo = this._refs.tickerCuerpo;
+      cuerpo.addEventListener('mouseenter', () => this._tickerTipMostrar());
+      cuerpo.addEventListener('mouseleave', () => {
+        if (!cuerpo.contains(document.activeElement)) this._tickerTipOcultar();
+      });
+      cuerpo.addEventListener('focusin', () => this._tickerTipMostrar());
+      cuerpo.addEventListener('focusout', (ev) => {
+        if (!cuerpo.contains(ev.relatedTarget)) this._tickerTipOcultar();
+      });
+    }
+
+    this._pintarChipTicker(); // estado de carga (sin reproducción): «En pausa»
 
     btnPlay.addEventListener('click', () => s.reproducido ? this._pausar() : this._reproducir());
     scrubber.addEventListener('pointerdown', () => { if (s.reproducido) this._pausar(); });
@@ -486,6 +528,7 @@ const App = {
       btn.setAttribute('aria-label', 'Pausar la reproducción · ×0,25 (6 h ≈ 2 s)');
       btn.classList.add('reproduciendo'); // CSS: estado pause neutro, sin sub-pulso
     }
+    this._pintarChipTicker();
     this._seguroTooltipOcultar();
     this._conAudio('setReproduciendo', true);
     this._coreoInicio(); // C4: zoom de arranque y, desde ahí, seguimiento del punto activo
@@ -521,6 +564,7 @@ const App = {
       btn.setAttribute('aria-label', 'Reproducir la tormenta · ×0,25 (6 h ≈ 2 s)');
       btn.classList.remove('reproduciendo');
     }
+    this._pintarChipTicker();
     this._conAudio('setReproduciendo', false);
     this._setActivo(s.iActivo, true); // re-aplica el crosshair al punto activo (sin audio)
   },
@@ -559,6 +603,11 @@ const App = {
      * la intro de zoom (modo 'inicio') manda la animación de zoomInicio. */
     if (this._mapa) {
       if (this._mapa.setPuntoInterp) this._mapa.setPuntoInterp(i, frac);
+      /* Rotación de la imagen del huracán: el ángulo acumula con el dt REAL de
+       * este frame y la ω del viento INTERPOLADO que acaba de fijar
+       * setPuntoInterp (sentido antihorario en mapa.js). Fuera del playback no
+       * se llama: el ángulo queda congelado, no se reinicia. */
+      if (this._mapa.avanzarRotacion) this._mapa.avanzarRotacion(dt);
       if (s.z.modo === 'seguir' && this._mapa.seguir) this._mapa.seguir(i, frac);
     }
 
@@ -593,13 +642,14 @@ const App = {
     if (!sinAudio) this._conAudio('actualizar', p, ant);
   },
 
-  /* Marcador del mapa + contador de acumulados + reloj UTC + ticker: SIEMPRE
-   * por la misma vía (playback, scrub, hover, ficha) para que nunca se
-   * desincronicen. */
+  /* Marcador del mapa + contador de acumulados + reloj UTC + indicador de
+   * viento + ticker: SIEMPRE por la misma vía (playback, scrub, hover, ficha)
+   * para que nunca se desincronicen. */
   _actualizarPunto(i) {
     if (this._mapa) this._mapa.setPuntoActivo(i);
     this._pintarContador(i);
     this._pintarRelojMapa(i);
+    this._pintarVientoMapa(i);
     this._pintarTicker(i);
   },
 
@@ -610,6 +660,32 @@ const App = {
     if (!s || !this._refs || !this._refs.relojMapa) return;
     const p = s.puntos[i];
     if (p) this._refs.relojMapa.textContent = Datos.fmtReloj(p.d);
+  },
+
+  /* Intensidad y viento del punto activo en el overlay superior central del
+   * mapa (misma vía que contador/reloj). El viento es el del punto activo —el
+   * mismo que muestra la línea de valores del reproductor— y la categoría no
+   * se interpola: cambia solo al cambiar de punto. El viento va en km/h
+   * (kt × 1,852, sin decimales): única vista en km/h, decisión de usuario; el
+   * id `vm-kt` se conserva como ancla del DOM. En cat 0 (T. tropical/TD)
+   * se usa etiqueta textual sin chip rojo, como la leyenda. */
+  _pintarVientoMapa(i) {
+    const s = this._estado;
+    const refs = this._refs;
+    if (!s || !refs || !refs.vmCat || !refs.vmKt) return;
+    const p = s.puntos[i];
+    if (!p) return;
+    if (refs.vmKt.dataset.i === String(i)) return; // playback a 60 fps: ya pintado
+    refs.vmKt.dataset.i = String(i);
+    const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
+    if (cat >= 1) {
+      refs.vmCat.className = 'chip chip-mini chip-intensidad chip-cat-' + cat;
+      refs.vmCat.textContent = 'Cat ' + cat;
+    } else {
+      refs.vmCat.className = 'vm-cat-texto';
+      refs.vmCat.textContent = 'T.T./TD'; // etiqueta de la leyenda, sin chip rojo
+    }
+    refs.vmKt.textContent = Math.round((+p.viento_kt || 0) * KT_A_KMH) + ' km/h';
   },
 
   /* Acumulados del punto activo en el overlay superior derecho del mapa
@@ -624,6 +700,20 @@ const App = {
   },
 
   /* ============ ticker narrativo: sucesos del huracán ============ */
+
+  /* Chip del ticker: «En vivo» SOLO mientras se reproduce (tinte de acento y
+   * punto latente); con el playback pausado o recién cargado queda «En pausa»
+   * con tinte neutro y sin punto. Se ata a la MISMA condición que la clase
+   * .reproduciendo del botón play (s.reproducido). */
+  _pintarChipTicker() {
+    const s = this._estado;
+    const chip = this._refs && this._refs.tickerChip;
+    if (!chip) return;
+    const vivo = !!(s && s.reproducido);
+    chip.classList.toggle('vivo', vivo);
+    const txt = this._refs.tickerChipTexto;
+    if (txt) txt.textContent = vivo ? 'En vivo' : 'En pausa';
+  },
 
   /* Sucesos narrativos de la tormenta: UNA lista calculada al montar (derivada
    * de s.puntos, EN ORDEN): (a) transiciones de estatus/categoría, (b)
@@ -763,7 +853,9 @@ const App = {
    * entre sucesos, el ticker ya no cambia punto a punto; antes del primer
    * suceso muestra la línea de inicio. Un slide corto por cambio de texto
    * (clase .entra; CSS, nunca marquee) y solo se repinta si el texto cambió
-   * (hover/pausa no re-animan). */
+   * (hover/pausa no re-animan). El texto VISUAL se trunca con elipsis; el
+   * mensaje COMPLETO va en aria-label (accesibilidad) y en el tooltip
+   * flotante que abren hover/foco (ver _tickerTipMostrar). */
   _pintarTicker(i) {
     const s = this._estado;
     const el = this._refs && this._refs.tickerTexto;
@@ -771,11 +863,47 @@ const App = {
     let texto = s.lineaInicio || '';
     const sucesos = s.sucesos || [];
     for (let k = 0; k < sucesos.length && sucesos[k].i <= i; k++) texto = sucesos[k].texto;
+    if (el.getAttribute('aria-label') !== texto) el.setAttribute('aria-label', texto);
     if (el.textContent === texto) return;
     el.textContent = texto;
     el.classList.remove('entra');
     void el.offsetWidth; // reinicia la animación de entrada (un slide por suceso)
     el.classList.add('entra');
+    /* con el tooltip abierto (hover o foco), el mensaje completo sigue al
+     * texto vigente: el playback cambia de suceso sin cerrarlo */
+    if (this._refs.tickerTip && !this._refs.tickerTip.classList.contains('oculto')) {
+      this._tickerTipMostrar();
+    }
+  },
+
+  /* Tooltip del MENSAJE COMPLETO del ticker: vidrio del proyecto (mismo
+   * .nota-tocatierra que las notas de tocatierra), anclado 8 px SOBRE la barra
+   * y alineado con el inicio del texto — no sigue al puntero porque la barra
+   * es fija. Se mantiene dentro del mapa: el CSS acota el ancho y aquí se
+   * acota el left al contenedor. textContent: el mensaje es dato, nunca HTML. */
+  _tickerTipMostrar() {
+    const refs = this._refs;
+    if (!refs || !refs.tickerTip || !refs.tickerTipTexto || !refs.tickerTexto) return;
+    const texto = (refs.tickerTexto.getAttribute('aria-label') || refs.tickerTexto.textContent || '').trim();
+    if (!texto) return;
+    const tip = refs.tickerTip;
+    refs.tickerTipTexto.textContent = texto;
+    tip.classList.remove('oculto');
+    const cont = tip.offsetParent; // .tormenta-mapa (position: relative)
+    if (!cont) return;
+    const rTexto = refs.tickerTexto.getBoundingClientRect();
+    const rCont = cont.getBoundingClientRect();
+    const ancho = tip.offsetWidth || 260;
+    const xMax = rCont.width - ancho - 8;
+    const x = Math.max(8, Math.min(rTexto.left - rCont.left + 8, xMax));
+    const y = rCont.bottom - rTexto.top + 8; // pie del mapa → borde superior del texto + aire
+    tip.style.left = x + 'px';
+    tip.style.bottom = y + 'px';
+  },
+
+  _tickerTipOcultar() {
+    const tip = this._refs && this._refs.tickerTip;
+    if (tip) tip.classList.add('oculto');
   },
 
   _setInterp(i, frac) {
@@ -785,6 +913,7 @@ const App = {
     const p = s.puntos[i], q = s.puntos[i + 1];
     const tInterp = q ? +p.d + (+q.d - +p.d) * frac : +s.puntos[s.puntos.length - 1].d;
     if (this._refs && this._refs.relojMapa) this._refs.relojMapa.textContent = Datos.fmtReloj(new Date(tInterp));
+    this._pintarVientoMapa(i); // mismo punto que la línea de valores (sin interpolar)
   },
 
   _setHover(i, ev) {
@@ -973,12 +1102,13 @@ const App = {
     const chipTxt = Datos.fmtCatCorto(cat);
     const dMu = ant ? p.muertes_acum - ant.muertes_acum : 0;
     const dDa = ant ? p.danos_acum_usd - ant.danos_acum_usd : 0;
+    /* la línea cierra en los acumulados con su delta: «Muertes N (Δ d) ·
+     * Daños $X (Δ $Y)». Sin nota suelta de «intervalo» (el delta ya lo dice). */
     return '<span class="' + chipCls + '">' + chipTxt + '</span>' +
       '<span>' + Datos.fmtEstatus(p.estatus) + '</span>' +
       '<span>Viento <b>' + p.viento_kt + ' kt</b> · Presión <b>' + p.presion_mb + ' mb</b></span>' +
-      '<span>Muertes <b>' + Datos.fmtEntero(p.muertes_acum) + '</b> (Δ ' + Datos.fmtDeltaEntero(dMu) + ')' +
-      ' · Daños <b>' + Datos.fmtUSDCorto(p.danos_acum_usd) + '</b> (Δ ' + Datos.fmtDeltaUSD(dDa) + ')</span>' +
-      '<span class="delta">' + (ant ? 'intervalo desde ' + Datos.fmtDia(ant.d) : 'inicio de la tormenta') + '</span>';
+      '<span>Muertes <b>' + Datos.fmtEntero(p.muertes_acum) + '</b> <span class="delta">(Δ ' + Datos.fmtDeltaEntero(dMu) + ')</span>' +
+      ' · Daños <b>' + Datos.fmtUSDCorto(p.danos_acum_usd) + '</b> <span class="delta">(Δ ' + Datos.fmtDeltaUSD(dDa) + ')</span></span>';
   }
 
 };

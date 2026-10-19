@@ -23,6 +23,11 @@ const Paneles = {
 
   /* renglón extra bajo el eje X del panel inferior (etiquetas de tocatierra) */
   ALTO_ETQ_TOCA: 54,
+  /* ancho medio de un glifo mono a 11.5 px (0,6 em) — usado para estimar el
+   * ancho de las etiquetas de tocatierra del eje X */
+  ANCHO_CAD: 7,
+  /* caracteres totales que se reservan a cada etiqueta de tocatierra del eje X */
+  MAX_CAD_ETQ_TOCA: 35,
   /* emparejado nota↔tocatierra: mismo criterio que el mapa (±2 h, la más cercana) */
   NOTA_UMBRAL_MS: 2 * 3600 * 1000,
 
@@ -120,6 +125,28 @@ const Paneles = {
     };
   },
 
+  /* Marcas del eje Y a partir del MÁXIMO del dato: paso «nice» (1·2·2,5·5·10 ×
+   * 10^k) con como mucho `maxMarcas` marcas y dominio cerrado en la ÚLTIMA
+   * marca, que por construcción es ≥ el máximo real. Así la escalera (o el
+   * área) nunca queda por encima del tick más alto —sin truncar: el dominio
+   * solo sobra lo justo que pide el redondeo—. Devuelve {max, valores}. */
+  _marcasY(maxV, maxMarcas) {
+    const max = +maxV;
+    if (!(max > 0)) return { max: 1, valores: [0, 1] };
+    const intervalos = Math.max(1, (maxMarcas || 5) - 1);
+    const bruto = max / intervalos;
+    const pot = Math.pow(10, Math.floor(Math.log10(bruto)));
+    let paso = pot * 10;
+    [1, 2, 2.5, 5, 10].some(m => {
+      if (m * pot >= bruto * (1 - 1e-12)) { paso = m * pot; return true; }
+      return false;
+    });
+    const fin = Math.ceil(max / paso - 1e-9) * paso;
+    const valores = [];
+    for (let i = 0; i * paso <= fin + paso * 1e-6; i++) valores.push(i * paso);
+    return { max: fin, valores: valores };
+  },
+
   /* Utilidad compartida: bandas IR + líneas de tocatierra (en los 3 paneles). */
   _marcasTemporales(g, o) {
     Datos.tramosIR(o.puntos).forEach(tr => {
@@ -178,14 +205,35 @@ const Paneles = {
     return etiquetas;
   },
 
-  /* Texto compacto de la etiqueta: «29 ago · 11:10 — Buras» (lugar truncado a
-   * ~18 caracteres con ellipsis). */
-  _fmtEtqToca(p, nota) {
+  /* Lugar abreviado para las etiquetas del eje X: primero el TRAMO principal
+   * (lo que va antes de la coma o del paréntesis: «Sur de Florida»,
+   * «Buras»); si aún es largo, corte por frontera de palabra con «…»
+   * («Desembocadura…»). La nota completa sigue en el tooltip. */
+  _abreviarLugar(lugar, max) {
+    const limpio = String(lugar == null ? '' : lugar).replace(/\s+/g, ' ').trim();
+    if (!limpio) return '';
+    const tope = Math.max(8, max | 0);
+    if (limpio.length <= tope) return limpio;
+    const cabeza = (limpio.split(/\s*[,;(]\s*/)[0] || limpio).trim() || limpio;
+    if (cabeza.length <= tope) return cabeza;
+    const trozo = cabeza.slice(0, tope - 1); // −1: el «…» ocupa el último hueco
+    const corte = trozo.lastIndexOf(' ');
+    const base = (corte >= Math.floor(tope * 0.5) ? trozo.slice(0, corte) : trozo)
+      .replace(/[\s,;:.·—-]+$/, '');
+    return base + '…';
+  },
+
+  /* Texto compacto de la etiqueta: «29 ago · 11:10 — Sur de Florida».
+   * `maxChars` (por defecto MAX_CAD_ETQ_TOCA) acota el TOTAL del texto al ancho
+   * disponible del trazado: el lugar se acorta para que nunca haya desbordes
+   * (nada de «Sur de Florida (M…»); el detalle completo va en el tooltip. */
+  _fmtEtqToca(p, nota, maxChars) {
     const hh = String(p.d.getUTCHours()).padStart(2, '0');
     const mm = String(p.d.getUTCMinutes()).padStart(2, '0');
-    let lugar = nota.lugar;
-    if (lugar.length > 18) lugar = lugar.slice(0, 17).replace(/\s+$/, '') + '…';
-    return Datos.fmtDia(p.d) + ' · ' + hh + ':' + mm + ' — ' + lugar;
+    const cab = Datos.fmtDia(p.d) + ' · ' + hh + ':' + mm;
+    const tope = (maxChars || Paneles.MAX_CAD_ETQ_TOCA) - cab.length - 3; // 3 = « — »
+    const lugar = Paneles._abreviarLugar(nota.lugar, tope);
+    return lugar ? cab + ' — ' + lugar : cab;
   },
 
   /* Texto completo (title nativo): fecha/hora UTC + lugar + Cat + nota. */
@@ -198,12 +246,12 @@ const Paneles = {
   /* Coloca etiquetas en hasta CUATRO niveles bajo el eje (anti-colisión por
    * rectángulos de ancho estimado, margen 6 px; si un racimo los satura, al
    * nivel menos cargado). Puro (sin DOM): devuelve [{e, centro, y}]. */
-  _colocarTocas(etiquetas, innerW, altoInt) {
-    const ANCHO_CAD = 6.1; // glifo mono a 10 px ≈ 0,61 em
+  _colocarTocas(etiquetas, innerW, altoInt, maxChars) {
+    const ANCHO_CAD = Paneles.ANCHO_CAD;
     const niveles = [altoInt + 36, altoInt + 48, altoInt + 60, altoInt + 72];
     const ocupados = niveles.map(() => []);
     return etiquetas.map(e => {
-      const ancho = Paneles._fmtEtqToca(e.p, e.nota).length * ANCHO_CAD + 4;
+      const ancho = Paneles._fmtEtqToca(e.p, e.nota, maxChars).length * ANCHO_CAD + 4;
       const centro = ancho >= innerW
         ? innerW / 2
         : Math.max(ancho / 2, Math.min(e.x, innerW - ancho / 2));
@@ -227,7 +275,12 @@ const Paneles = {
   _etqTocatierraEje(g, o) {
     const etiquetas = Paneles._tocasConNota(o.puntos, o.notas, o.x);
     if (!etiquetas.length) return;
-    const colocadas = Paneles._colocarTocas(etiquetas, o.innerW, o.altoInt);
+    /* ancho disponible expresado en CARACTERES (nunca más que MAX_CAD_ETQ_TOCA):
+     * en columnas estrechas el lugar se acorta aún más para que la etiqueta
+     * nunca desborde el trazado */
+    const maxChars = Math.min(Paneles.MAX_CAD_ETQ_TOCA,
+      Math.max(24, Math.floor((o.innerW - 8) / Paneles.ANCHO_CAD)));
+    const colocadas = Paneles._colocarTocas(etiquetas, o.innerW, o.altoInt, maxChars);
     const grupo = g.append('g').attr('class', 'etq-tocas-eje');
     colocadas.forEach(c => {
       const e = c.e;
@@ -243,7 +296,7 @@ const Paneles = {
         .attr('x', c.centro)
         .attr('y', c.y)
         .attr('text-anchor', 'middle')
-        .text(Paneles._fmtEtqToca(e.p, e.nota))
+        .text(Paneles._fmtEtqToca(e.p, e.nota, maxChars))
         .append('title').text(Paneles._tituloEtqToca(e.p, e.nota));
     });
   },
@@ -272,7 +325,10 @@ const Paneles = {
 
     this._marcasTemporales(g, { x: o.x, puntos: o.puntos, altoInt: altoInt, innerW: innerW });
 
-    const yV = d3.scaleLinear().domain([0, o.vientoMax]).nice().range([altoInt, 0]);
+    /* marcas «nice» cerradas en el máximo: el área de viento nunca supera el
+     * tick más alto (misma regla que los acumulados) */
+    const mYV = Paneles._marcasY(o.vientoMax, 5);
+    const yV = d3.scaleLinear().domain([0, mYV.max]).range([altoInt, 0]);
     /* El eje derecho está INVERTIDO: la menor presión (mayor intensidad) se lee
      * más arriba, así la línea de presión co-varía con la del viento. */
     const yP = d3.scaleLinear().domain([o.presionBaja, 1010]).range([0, altoInt]);
@@ -287,7 +343,8 @@ const Paneles = {
     g.append('path').attr('d', lineaP(o.puntos)).attr('fill', 'none')
       .attr('stroke', this.GRIS).attr('stroke-width', 1.5).attr('stroke-dasharray', '5 4');
 
-    g.append('g').attr('class', 'eje').call(d3.axisLeft(yV).ticks(4).tickFormat(v => Datos.fmtEntero(v)));
+    g.append('g').attr('class', 'eje')
+      .call(d3.axisLeft(yV).tickValues(mYV.valores).tickFormat(v => Datos.fmtEntero(v)));
     g.append('g').attr('class', 'eje eje-der')
       .attr('transform', 'translate(' + innerW + ',0)')
       .call(d3.axisRight(yP).ticks(4).tickFormat(v => Datos.fmtEntero(v)));
@@ -340,8 +397,11 @@ const Paneles = {
 
     this._marcasTemporales(g, { x: o.x, puntos: o.puntos, altoInt: altoInt, innerW: innerW });
 
+    /* Dominio = última marca «nice» ≥ máximo (ver _marcasY): la escalera y el
+     * área NUNCA pasan por encima del tick superior (sin truncar el dato). */
     const maxV = d3.max(o.puntos, p => p[o.campo]) || 1;
-    const y = d3.scaleLinear().domain([0, maxV]).nice().range([altoInt, 0]);
+    const mY = Paneles._marcasY(maxV, 5);
+    const y = d3.scaleLinear().domain([0, mY.max]).range([altoInt, 0]);
 
     const paso = d3.line().curve(d3.curveStepAfter).x(p => o.x(p.d)).y(p => y(p[o.campo]));
     const area = d3.area().curve(d3.curveStepAfter)
@@ -350,7 +410,8 @@ const Paneles = {
     g.append('path').attr('d', paso(o.puntos)).attr('fill', 'none')
       .attr('stroke', o.color).attr('stroke-width', 1.9);
 
-    g.append('g').attr('class', 'eje').call(d3.axisLeft(y).ticks(4).tickFormat(o.fmtTick));
+    g.append('g').attr('class', 'eje')
+      .call(d3.axisLeft(y).tickValues(mY.valores).tickFormat(o.fmtTick));
 
     if (o.ultimo) {
       g.append('g').attr('class', 'eje eje-x')

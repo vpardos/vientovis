@@ -5,13 +5,30 @@
  *                 «carril» de contorno oscuro + interior ADAPTATIVO por
  *                 categoría para contraste sobre satélite, tocatierras con
  *                 etiqueta, marcador = img/hurricane.png escalado por viento
- *                 (kt) con tamaño aparente CONSISTENTE con el zoom del mapa
- *                 y con halo por categoría, y la API de coreografía de zoom
+ *                 (kt) con tamaño aparente CONSISTENTE con el zoom del mapa,
+ *                 halo por categoría y la IMAGEN GIRANDO en sentido
+ *                 ANTIHORARIO (ciclón boreal) a velocidad ∝ viento real, y la
+ *                 API de coreografía de zoom
  *                 (C4): zoomInicio / seguir / panorama, usados SOLO durante
  *                 el playback.
  *  (V2: ya no hay mini-mapas — la galería desapareció; la vista tormenta
  *  es la pantalla principal y su atribución vive en el pie del sitio.)
  */
+
+/* Velocidad angular de la ROTACIÓN de la imagen del huracán, en °/SEGUNDO,
+ * a partir del viento REAL en kt:  ω(kt) = (kt/160)^1,6 · 140
+ *   30 kt (baja)  ≈  9,6 °/s → una vuelta cada ~37 s
+ *   85 kt (cat 1) ≈ 51   °/s → una vuelta cada ~7 s
+ *  160 kt (cat 5) = 140  °/s → una vuelta cada ~2,6 s
+ * (×2 respecto de la calibración original de ·70: el giro se percibe vivo
+ * incluso en categorías bajas).
+ * El SENTIDO (antihorario, hemisferio NORTE) se aplica al girar el signo al
+ * escribir el transform: CSS `rotate(+a)` gira en sentido HORARIO → se usa −a.
+ * Constante ÚNICA editable: aquí se calibra la escala/velocidad del giro. */
+const ROTACION_ANG_POR_S = (kt) => {
+  const v = Number(kt);
+  return Math.pow((Number.isFinite(v) ? Math.max(0, v) : 0) / 160, 1.6) * 140;
+};
 
 const MapaTormenta = {
 
@@ -90,7 +107,8 @@ const MapaTormenta = {
      * (opción `notas`, emparejo por marca de tiempo ≤ 2 h, la más cercana);
      * sin nota se queda la etiqueta genérica «Tocatierra» de siempre. La nota
      * completa queda accesible al hover (tooltip flotante) y como respaldo en
-     * title/aria-label. */
+     * aria-label (sin title nativo: el navegador no pinta su tooltip encima
+     * del tooltip del mapa). */
     const UMBRAL_NOTA_MS = 2 * 3600 * 1000;
     const normalizarNotas = (lista) => (Array.isArray(lista) ? lista : [])
       .map(n => ({
@@ -122,13 +140,15 @@ const MapaTormenta = {
       String(d.getUTCMinutes()).padStart(2, '0') + ' UTC';
 
     /* HTML de la etiqueta: genérica sin nota; con nota, tarjeta compacta de
-     * dos líneas (hora + Cat N / lugar) con title y aria-label de respaldo */
+     * dos líneas (hora + Cat N / lugar) con aria-label de respaldo.
+     * SIN `title`: el label nativo del navegador se superponía al tooltip
+     * flotante de la nota al hacer hover sobre el tocatierra. */
     const htmlEtiqueta = (e) => {
       if (!e.nota) return '<span class="etq-tocatierra">Tocatierra</span>';
       const cat = Math.max(0, Math.min(5, e.p.cat_ss | 0));
       const desc = 'Tocatierra · ' + Datos.fmtReloj(e.p.d) + ' · ' + e.nota.lugar + ' — ' + e.nota.nota;
       return '<span class="etq-tocatierra etq-toca-nota" role="img"' +
-        ' title="' + escapar(desc) + '" aria-label="' + escapar(desc) + '">' +
+        ' aria-label="' + escapar(desc) + '">' +
         '<span class="etq-toca-cab"><span class="etq-toca-hora">' + fmtHoraCorta(e.p.d) + '</span>' +
         '<span class="chip chip-mini chip-intensidad chip-cat-' + cat + '">' + Datos.fmtCatCorto(cat) + '</span></span>' +
         '<span class="etq-toca-lugar">' + escapar(e.nota.lugar) + '</span>' +
@@ -255,10 +275,20 @@ const MapaTormenta = {
           let minSolape = Infinity;
           rects.forEach((r, j) => { const s = solape(r); if (s < minSolape) { minSolape = s; k = j; } });
         }
-        puestas.push(rects[k]);
+        /* ACOTADO al contenedor del mapa (margen 6 px): la tarjeta de la
+         * etiqueta nunca queda cortada por un borde — se desplaza su ancla
+         * antes que recortarla (el trazo/marcador del punto no se mueve). */
+        const MARGEN_ETQ = 6;
         const cd = cands[k];
-        if (e.ax !== cd.ax || e.ay !== cd.ay) {
-          e.ax = cd.ax; e.ay = cd.ay;
+        const xMax = Math.max(MARGEN_ETQ, tam.x - MARGEN_ETQ - w);
+        const yMax = Math.max(MARGEN_ETQ, tam.y - MARGEN_ETQ - h);
+        const x = Math.min(Math.max(c.x - cd.ax, MARGEN_ETQ), xMax);
+        const y = Math.min(Math.max(c.y - cd.ay, MARGEN_ETQ), yMax);
+        const ax = c.x - x;
+        const ay = c.y - y;
+        puestas.push({ x: x - 3, y: y - 2, w: w + 6, h: h + 4 }); // caja acotada + aire
+        if (e.ax !== ax || e.ay !== ay) {
+          e.ax = ax; e.ay = ay;
           e.marcador.setIcon(iconoEtiqueta(e, e.ax, e.ay)); // recrea el icono
         }
         conectarEtiqueta(e);
@@ -285,7 +315,7 @@ const MapaTormenta = {
      * el encuadre de REFERENCIA (el del fitBounds inicial/reencuadrar): en el
      * zoom por defecto se ve igual que antes, encoge al alejar y crece al
      * acercar (sin tope superior), conservando su tamaño aparente sobre el
-     * terreno. Redondeo a múltiplos de 2 px (acota la caché de L.icon) y suelo
+     * terreno. Redondeo a múltiplos de 2 px (acota la caché de divIcon) y suelo
      * de 12 px para que nunca desaparezca al alejarse mucho. --- */
     let zoomBase = 4; // zoom del encuadre de REFERENCIA del ícono (lo fija encajar())
     const tamIconoBase = (kt) => {
@@ -300,30 +330,82 @@ const MapaTormenta = {
       const f = (Number.isFinite(z) && Number.isFinite(zr)) ? Math.min(1, Math.pow(2, z - zr)) : 1;
       return Math.max(12, Math.round((tamIconoBase(kt) * f) / 2) * 2);
     };
-    const cacheIconos = Object.create(null); // una L.icon por tamaño (px) ya usado
+    /* Marcador en DOS CAPAS (L.divIcon):
+     *  - WRAPPER = el div del divIcon, del tamaño EXACTO del ícono (px) y con
+     *    ancla CENTRADA: es lo ÚNICO que Leaflet posiciona/transforma
+     *    (translate3d en cada setLatLng, y scale del zoom animado, con
+     *    transform-origin 0 0).
+     *  - INTERIOR = la <img> de hurricane.png al 100 % del wrapper: gira ELLA
+     *    (transform propio, transform-origin 50 % 50 %), así que el eje de giro
+     *    es siempre el centro de la imagen y, por el ancla centrada, el PUNTO
+     *    EXACTO de la ruta (antes se rotaba el mismo elemento que Leaflet
+     *    trasladaba y el ícono se salía del trayecto). */
+    const HTML_HURACAN = '<img class="marcador-huracan-interior" src="img/hurricane.png"' +
+      ' alt="" draggable="false">';
+    const cacheIconos = Object.create(null); // un L.divIcon por tamaño (px) ya usado
     const iconoHuracan = (px) => {
       if (!cacheIconos[px]) {
-        cacheIconos[px] = L.icon({
-          iconUrl: 'img/hurricane.png',
+        cacheIconos[px] = L.divIcon({
+          html: HTML_HURACAN,
+          className: 'marcador-huracan', // wrapper (sin el fondo/borde de leaflet-div-icon)
           iconSize: [px, px],
-          iconAnchor: [px / 2, px / 2],
-          className: 'marcador-huracan'
+          iconAnchor: [px / 2, px / 2]
         });
       }
       return cacheIconos[px];
     };
+    /* <img> interior del wrapper que Leaflet monta para el marcador. Al
+     * cambiar de tamaño Leaflet REUSA el div y reescribe su html, así que la
+     * <img> es un elemento NUEVO cada vez: hay que reengancharla. */
+    const interiorDe = (el) => (el ? el.querySelector('img.marcador-huracan-interior') : null);
 
     const haloActual = L.circleMarker([puntos[0].lat, puntos[0].lon], {
       radius: 12, stroke: false, interactive: false
     }).addTo(mapa);
+
+    /* --- ROTACIÓN de la imagen (solo la imagen; el halo NO gira) ---
+     * `rotDeg` es el ángulo ACUMULADO (siempre creciente; se pinta en negativo
+     * para el sentido antihorario). Vive aquí, en el cierre de crear(), y NO se
+     * reinicia al cambiar de punto ni al reescalar el ícono: el huracán «sigue
+     * girando» desde donde iba al reanudar el playback. Solo `avanzarRotacion`
+     * (llamada desde el _tick de app.js) lo hace crecer con el dt real.
+     * `imgHuracan` = <img> INTERIOR vigente del marcador (no el wrapper, que
+     * es el que mueve Leaflet); fijarTamanoIcono() la reengancha al elemento
+     * NUEVO y le reaplica el ángulo acumulado de inmediato (ver allí). */
+    let rotDeg = 0;         // ángulo acumulado (deg, positivo = antihorario)
+    let imgHuracan = null;  // <img> interior montada ahora por Leaflet
+    let tamIconoActual = tamIcono(puntos[0].viento_kt); // px actuales (mapa sin vista aún: base)
+    let vientoActivo = +puntos[0].viento_kt; // último viento aplicado: zoom y ω reusan esto
+
+    /* El giro se escribe como `transform` SOBRE LA <img> INTERIOR: Leaflet no
+     * toca ese elemento (solo el wrapper del divIcon lleva translate3d/scale),
+     * así que el transform propio nunca se pisa ni se recompone con el del
+     * posicionamiento y gira SIEMPRE sobre el centro de la imagen
+     * (transform-origin: 50 % 50 %, ver .marcador-huracan-interior). */
+    const rotarIcono = () => {
+      if (!imgHuracan) return;
+      const ang = -rotDeg; // CSS + = horario → −ang = ANTIHORARIO (hemisferio norte)
+      imgHuracan.style.transform = 'rotate(' + ang + 'deg)';
+    };
+
+    /* Cambia el tamaño del ícono conservando el ÁNGULO: el divIcon se recrea
+     * con el px actual (wrapper a medida, ancla centrada) y la <img> interior
+     * nueva recibe el ángulo ACUMULADO al instante, así el reescalado por
+     * viento/zoom nunca «endereza» el huracán. */
+    const fijarTamanoIcono = (px) => {
+      puntoActual.setIcon(iconoHuracan(px));
+      tamIconoActual = px;
+      imgHuracan = interiorDe(puntoActual.getElement()) || imgHuracan;
+      rotarIcono();
+    };
+
     const puntoActual = L.marker([puntos[0].lat, puntos[0].lon], {
-      icon: iconoHuracan(tamIcono(puntos[0].viento_kt)),
+      icon: iconoHuracan(tamIconoActual),
       interactive: false,
       keyboard: false,
       zIndexOffset: 400
     }).addTo(mapa);
-    let tamIconoActual = tamIcono(puntos[0].viento_kt); // px actuales (mapa sin vista aún: base)
-    let vientoActivo = +puntos[0].viento_kt; // último viento aplicado: el zoom reusa esto
+    imgHuracan = interiorDe(puntoActual.getElement()); // <img> interior, no el wrapper
 
     /* Aplica posición + viento al marcador y su halo: misma vía para el snap
      * discreto y para el deslizamiento interpolado del playback. El tamaño en
@@ -332,10 +414,9 @@ const MapaTormenta = {
       vientoActivo = +viento;
       const t = tamIcono(vientoActivo);
       if (t !== tamIconoActual) { // reescalado solo si cambia el tamaño (viento o zoom)
-        puntoActual.setIcon(iconoHuracan(t));
-        tamIconoActual = t;
+        fijarTamanoIcono(t);
       }
-      puntoActual.setLatLng([lat, lon]);
+      puntoActual.setLatLng([lat, lon]); // mueve el wrapper: la rotación no se toca
       haloActual.setLatLng([lat, lon]);
       haloActual.setRadius(t / 2 + 3);
       haloActual.setStyle({
@@ -372,8 +453,7 @@ const MapaTormenta = {
       const z = mapa.getZoom();
       const t = tamIcono(vientoActivo, z);
       if (t !== tamIconoActual) { // setIcon solo si el px redondeado cambió
-        puntoActual.setIcon(iconoHuracan(t));
-        tamIconoActual = t;
+        fijarTamanoIcono(t); // conserva el ángulo en la <img> interior nueva
       }
       haloActual.setRadius(t / 2 + 3); // halo: mismo factor que el ícono
       if (indiceHover >= 0) {
@@ -448,6 +528,29 @@ const MapaTormenta = {
           ? { lat: p.lat, lon: p.lon, viento: +p.viento_kt }
           : interp(i, frac);
         aplicarPunto(v.lat, v.lon, v.viento, p);
+      },
+
+      /* SOLO playback: acumula el giro con el dt REAL del frame (ms) usando la
+       * ω del viento VIGENTE del marcador (el interpolado de este frame, ya
+       * fijado por setPuntoInterp). Sin reproducción nadie la llama: el ángulo
+       * queda CONGELADO —no se reinicia— y la rotación se ve viva al reanudar.
+       * Con prefers-reduced-motion no gira: imagen estática. */
+      avanzarRotacion(dtMs) {
+        if (reduceMov()) return; // accesibilidad: sin rotación
+        const dt = Math.max(0, Math.min(150, Number(dtMs) || 0)) / 1000;
+        if (!dt) return;
+        // módulo 360: el ángulo no crece sin límite y el salto es invisible
+        rotDeg = (rotDeg + ROTACION_ANG_POR_S(vientoActivo) * dt) % 360;
+        rotarIcono();
+      },
+
+      /* Diagnóstico (consola/eval): ángulo acumulado y ω vigente (deg/s). */
+      rotacion() {
+        return {
+          angulo: rotDeg,
+          omega: ROTACION_ANG_POR_S(vientoActivo),
+          viento_kt: vientoActivo
+        };
       },
 
       /* Anillo punteado del punto en vista previa (hover), o null para quitarlo. */

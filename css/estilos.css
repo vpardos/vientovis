@@ -1,7 +1,7 @@
 /* estilos.css — vientovis (tema «tormenta en gris»)
  * Sala de situación: gris oscuro profundo con brillos verde agua y grano
  * sutil; el blanco se reserva para los datos. Canales de datos disciplinados:
- *  - categoría Saffir–Simpson → única paleta RAMPA DE ROJOS (V2: más cat,
+ *  - categoría Saffir–Simpson → única paleta RAMPA DE ROJOS (V3: más cat,
  *    más oscura; el carmesí de muertes es más rosado y nunca es categoría)
  *  - muertes → carmesí propio · daños → ámbar propio
  * El acento verde agua (#2EA38B) es CHROME (botones, foco, estados activos),
@@ -39,7 +39,7 @@
   --ambar: #e8a845;        /* daños */
   --ambar-2: #f5c56b;
 
-  /* paleta de categoría (V2: rampa de rojos, más cat = más oscuro) — SOLO categoría
+  /* paleta de categoría (V3: rampa de rojos, más cat = más oscuro) — SOLO categoría
    * Idéntico valor a Datos.CAT_COLORES en js/datos.js. */
   --cat0: #f2a08f;
   --cat1: #e47762;
@@ -498,6 +498,13 @@ b { font-weight: 600; }
 
 .tormenta-stats b { color: var(--texto); font-weight: 600; font-variant-numeric: tabular-nums; }
 
+/* UNIDAD de la cifra (p. ej. «mil M» de los daños): gris más tenue y con aire
+ * a los lados, para que nunca se funda con la etiqueta que sigue («daños») */
+.tormenta-stats .ts-unidad {
+  margin-left: 3px;
+  color: var(--texto-3);
+}
+
 .tormenta-cuerpo {
   display: grid;
   grid-template-columns: minmax(360px, 45fr) 55fr;
@@ -536,7 +543,8 @@ b { font-weight: 600; }
 .leyenda-categorias {
   position: absolute;
   left: 10px;
-  bottom: 46px; /* por encima del ticker de noticias del pie (38 px + margen) */
+  bottom: 74px; /* por encima de la atribución Esri (bottom 44 px) y del
+                 * ticker de noticias (38 px): nunca se tocan */
   z-index: 800;
   display: flex;
   align-items: center;
@@ -633,11 +641,56 @@ b { font-weight: 600; }
  * baja a la altura de la leyenda para no solaparse */
 .tormenta-mapa .leaflet-top.leaflet-left { top: 50px; }
 
+/* intensidad + viento del punto activo: overlay superior CENTRAL del mapa,
+ * entre el reloj UTC y el contador de acumulados. Mismo vidrio oscuro que
+ * ambos, mono, texto claro AA, sin capturar clics y en una sola fila compacta
+ * para no robar ancho al mapa. En cat 0 (T. tropical/TD) la categoría va como
+ * etiqueta textual, sin chip rojo (mismo criterio que la leyenda). */
+.viento-mapa {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: calc(100% - 24px);
+  padding: 5px 7px;
+  background: rgba(24, 23, 21, 0.85);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  font: 600 12px/1.25 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  white-space: nowrap;
+}
+
+.viento-mapa .chip { flex: none; }
+.viento-mapa .vm-sep { color: var(--texto-3); font-weight: 500; }
+
+.viento-mapa .vm-cat-texto {
+  font: 500 11.5px/1.25 var(--mono);
+  letter-spacing: 0.03em;
+  color: var(--texto);
+}
+
+/* en mapas estrechos (ventana ≤ 1430 px, donde el mapa no llega a 620 px de
+ * ancho, y móvil) los tres overlays no caben en el mismo renglón: el indicador
+ * baja una fila, centrado bajo el reloj y el contador. La ficha abierta puede
+ * taparlo un instante en escritorio: es transitoria. */
+@media (max-width: 1430px) {
+  .viento-mapa { top: 74px; }
+}
+
 /* barra de noticias de TV al pie del mapa (mismo overlay que contador/reloj):
  * chip «EN VIVO» (verde agua con texto oscuro, 5,5:1 AA) + cuerpo de vidrio
  * oscuro con la última actualización del huracán, SIEMPRE en un renglón con
- * elipsis. z-index 1001 como el contador y pointer-events none: es
- * informativa, no captura clics del mapa. */
+ * elipsis. z-index 1001 como el contador; la barra no captura clics del mapa
+ * (pointer-events none) y SOLO el cuerpo del texto los rehabilita para el
+ * hover del mensaje completo: el chip y el resto del mapa quedan libres. */
 .ticker-noticias {
   position: absolute;
   left: 0;
@@ -665,6 +718,17 @@ b { font-weight: 600; }
   white-space: nowrap;
 }
 
+/* «En vivo» SOLO durante la reproducción (fondo de acento + punto latente);
+ * con el playback pausado o recién cargado, tinte neutro y sin punto. El
+ * estado lo pone app.js (_pintarChipTicker) con la misma condición que la
+ * clase .reproduciendo del botón play. */
+.ticker-chip:not(.vivo) {
+  background: var(--panel-2);
+  color: var(--texto-2); /* 5,6:1 AA sobre --panel-2 */
+}
+
+.ticker-chip:not(.vivo) .ticker-punto { display: none; }
+
 /* punto «en vivo»: pulso sutil de opacidad (anulado con prefers-reduced-motion) */
 .ticker-punto {
   width: 7px;
@@ -683,6 +747,7 @@ b { font-weight: 600; }
   background: rgba(24, 23, 21, 0.92);
   border-top: 1px solid var(--linea);
   backdrop-filter: blur(4px);
+  pointer-events: auto; /* zona de hover/foco del mensaje completo */
 }
 
 .ticker-texto {
@@ -694,6 +759,26 @@ b { font-weight: 600; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: help; /* la elipsis anuncia el tooltip del mensaje completo */
+}
+
+/* teclado: mismo anillo de foco del sitio, pegado al renglón (la barra de
+ * 38 px recorta el outline con offset positivo) */
+.ticker-texto:focus-visible {
+  outline-offset: -2px;
+}
+
+/* tooltip del MENSAJE COMPLETO del ticker (hover o foco del texto): reusa el
+ * vidrio de .nota-tocatierra, pero se ancla con position:absolute SOBRE la
+ * barra dentro del mapa (app.js fija left/bottom), no sigue al puntero y no
+ * captura interacción. El ancho se acota al contenedor para que nunca lo
+ * recorte el overflow:hidden de .tormenta-mapa. */
+.nota-tocatierra.ticker-tip {
+  position: absolute;
+  left: 12px;
+  bottom: 46px; /* 38 px de barra + 8 de aire */
+  max-width: min(520px, calc(100% - 24px));
+  overflow-wrap: anywhere;
 }
 
 /* un slide corto por actualización; app.js re-aplica la clase por punto */
@@ -799,10 +884,26 @@ b { font-weight: 600; }
   color: var(--texto-2);
 }
 
-/* ícono del huracán (img/hurricane.png), escalado por categoría:
- * halo claro + sombra para que recorte sobre la textura satelital */
+/* ícono del huracán (img/hurricane.png), escalado por categoría.
+ * Marcador en DOS CAPAS (L.divIcon): el WRAPPER lo posiciona y lo transforma
+ * SOLO Leaflet (translate3d al moverse y scale del zoom animado, con
+ * transform-origin 0 0), por eso no lleva estilos de rotación; la <img>
+ * interior es la ÚNICA que gira —sobre su propio centro, que por el ancla
+ * centrada del divIcon es el punto exacto de la ruta— y lleva el halo claro +
+ * sombra para que recorte sobre la textura satelital. */
 .marcador-huracan {
+  background: none;
+  border: 0;
+  pointer-events: none; /* el hover/clic del punto lo dan las capturas invisibles */
+}
+
+.marcador-huracan-interior {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%; /* eje de giro = centro del ícono = ancla del marcador */
   filter: drop-shadow(0 0 5px rgba(240, 238, 233, 0.55)) drop-shadow(0 2px 3px rgba(12, 11, 10, 0.65));
+  -webkit-user-drag: none;
 }
 
 /* --- paneles --- */
@@ -1358,9 +1459,6 @@ input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2
 
 .pie-integrantes { white-space: normal; }
 
-/* única nota de atribución Esri del mapa principal (V2: antes vivía por ficha) */
-.pie-atr { color: var(--texto-3); }
-
 /* ------------ Leaflet: estilos propios (tema oscuro) ------------ */
 
 .leaflet-container {
@@ -1390,9 +1488,12 @@ input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2
   font: 10.5px var(--mono) !important;
   color: var(--texto-2) !important;
   border-top-left-radius: 4px;
+  white-space: nowrap !important; /* un solo renglón: alto acotado (no invade la leyenda) */
 }
 
-/* la atribución Esri (pie derecho del mapa) sube por encima del ticker */
+/* la atribución Esri (pie derecho del mapa) sube por encima del ticker; la
+ * leyenda de categorías va MÁS ARRIBA (bottom 74 px): columna con 14 px de
+ * separación, ambas sobre el ticker de noticias */
 .tormenta-mapa .leaflet-bottom { bottom: 44px; }
 
 /* ------------ movimiento ------------ */
