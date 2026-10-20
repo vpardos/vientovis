@@ -81,7 +81,7 @@ const App = {
     const meta = Datos.porId(dest.id);
     document.title = dest.profundo && meta
       ? 'Vientovis — ' + meta.nombre + ' (' + meta.anio + ')'
-      : 'El impacto de los huracanes más relevantes de los últimos años';
+      : 'Los 10 huracanes con más impacto según su mortalidad y pérdida económica';
     this._montarPantallaPrincipal(dest.id, token);
   },
 
@@ -154,9 +154,9 @@ const App = {
     main.innerHTML =
       '<section class="inicio">' +
       '<div class="hero">' +
-      '<h1 class="hero-titulo">El impacto de los huracanes <em>más relevantes</em> de los últimos años</h1>' +
+      '<h1 class="hero-titulo">Los 10 huracanes con <em>más impacto</em> según su mortalidad y pérdida económica</h1>' +
       '<div class="hero-lateral">' +
-      '<p class="hero-lede">Los daños ocasionados por los huracanes más relevantes de la actualidad, medidos según la cantidad de víctimas, la destrucción de propiedades y sus costos, para dar mayor claridad sobre su impacto en las zonas a largo plazo.</p>' +
+      '<p class="hero-lede">Los daños ocasionados por los huracanes más relevantes de la actualidad, medidos según la cantidad de víctimas, la destrucción de propiedades y sus costos.</p>' +
       '<p class="hero-frase" id="hero-frase"></p>' +
       '</div>' +
       '</div>' +
