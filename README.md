@@ -1,6 +1,6 @@
 # VientoVis 🌀
 
-> Visualización interactiva y con sonificación de los 10 huracanes atlánticos más devastadores (2005–2024), mostrando la relación temporal entre intensificación rápida, tocatierra, mortalidad y pérdidas económicas.
+> **Los 10 huracanes con *más impacto* según su mortalidad y pérdida económica** — visualización interactiva y con sonificación de los huracanes atlánticos más devastadores (2005–2024), mostrando la relación temporal entre intensificación rápida, tocatierra, mortalidad y pérdidas económicas.
 
 🚀 **Deploy:** [https://vpardos.github.io/vientovis/](https://vpardos.github.io/vientovis/)  
 📄 **Informe Entrega 1:** [documento/entrega1.pdf](documento/entrega1.pdf)

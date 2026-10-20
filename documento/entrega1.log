@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/TeX Live for SUSE Linux) (preloaded format=pdflatex 2026.10.20)  20 OCT 2026 15:54
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/TeX Live for SUSE Linux) (preloaded format=pdflatex 2026.10.20)  20 OCT 2026 15:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1060,7 +1060,7 @@ Package rerunfilecheck Info: File `entrega1.out' has not changed.
 Here is how much of TeX's memory you used:
  31399 strings out of 468581
  610320 string characters out of 5446527
- 1083399 words of memory out of 5000000
+ 1084399 words of memory out of 5000000
  59411 multiletter control sequences out of 15000+600000
  705245 words of font info for 204 fonts, out of 8000000 for 9000
  475 hyphenation exceptions out of 8191
@@ -1074,7 +1074,7 @@ lm/lmsy10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy5.pfb></usr/share/tex
 mf/fonts/type1/public/lm/lmsy6.pfb></usr/share/texmf/fonts/type1/public/lm/lmtk
 10.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt10.pfb></usr/share/texmf/fon
 ts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on entrega1.pdf (9 pages, 1741993 bytes).
+Output written on entrega1.pdf (9 pages, 1742431 bytes).
 PDF statistics:
  223 PDF objects out of 1000 (max. 8388607)
  173 compressed objects within 2 object streams
