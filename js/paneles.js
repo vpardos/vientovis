@@ -188,18 +188,24 @@ const Paneles = {
 
   /* Emparejado 1:1 nota → tocatierra: el tocatierra más cercano en tiempo
    * (±2 h, mismo umbral que el mapa), sin repetir una nota en dos tocatierras
-   * contiguos. Devuelve [{p, nota, x}] ordenado por tiempo. */
+   * contiguos NI una segunda nota en el mismo tocatierra (criterio 1:1 igual
+   * que el ticker de app.js: la primera nota gana). Devuelve [{p, nota, x}]
+   * ordenado por tiempo. */
   _tocasConNota(puntos, notas, x) {
     const etiquetas = [];
+    const emparejados = new Set();
     (notas || []).forEach(nota => {
       let mejor = null;
       let mejorDist = Infinity;
       puntos.forEach(p => {
-        if (!p.tocatierra) return;
+        if (!p.tocatierra || emparejados.has(p)) return;
         const dist = Math.abs(+p.d - nota.tMs);
         if (dist < mejorDist) { mejorDist = dist; mejor = p; }
       });
-      if (mejor && mejorDist <= Paneles.NOTA_UMBRAL_MS) etiquetas.push({ p: mejor, nota: nota, x: x(mejor.d) });
+      if (mejor && mejorDist <= Paneles.NOTA_UMBRAL_MS) {
+        emparejados.add(mejor);
+        etiquetas.push({ p: mejor, nota: nota, x: x(mejor.d) });
+      }
     });
     etiquetas.sort((a, b) => +a.p.d - +b.p.d);
     return etiquetas;

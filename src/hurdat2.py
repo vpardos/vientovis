@@ -143,9 +143,16 @@ def load_hurdat2(path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
                 header_rows.append((cur_id, cur_name, int(parts[2])))
                 continue
 
-            # Parche: línea del NHC con la coma faltante entre lat y lon
+            # Parche: línea del NHC con la coma faltante entre lat y lon.
+            # Sanity check: si tras el parche siguen faltando campos, la línea
+            # es otra corrupción (no el typo conocido) y se fail-fast en vez
+            # de silently desplazar columnas.
             if len(parts) < len(DATA_COLS) + 1:
-                parts = parts[:4] + re.split(r"\s+", parts[4]) + parts[5:]
+                parts = parts[:4] + re.split(r"\s+", parts[4].strip()) + parts[5:]
+                if len(parts) < len(DATA_COLS) + 1:
+                    raise ValueError(
+                        f"Línea de datos con campos de menos en {path!r}: {line!r}"
+                    )
                 n_patched += 1
 
             data_rows.append((cur_id, cur_name, *parts[: len(DATA_COLS)]))

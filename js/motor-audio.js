@@ -84,7 +84,7 @@ class MotorAudio {
     // Control global (se guardan aunque el motor no esté iniciado).
     this._volumen = 0.7;       // 0..1
     this._mudo = false;
-    this._reproduciendo = true; // la app llama setReproduciendo(true) al dar play
+    this._reproduciendo = false; // silencio hasta que la app llame setReproduciendo(true) al dar play
 
     // Nodos de audio (se crean en _construirGrafo).
     this.masterGain = null;
@@ -851,8 +851,8 @@ class MotorAudio {
 
   /**
    * Ventana real del paso: tiempo de audio transcurrido entre llamadas a
-   * actualizar(). A 1×, un paso de 6 h ≈ 0,5 s; a 2× ≈ 0,25 s. Capada a 1,2 s
-   * para que un scrub largo no deje eventos colgando sobre el paso siguiente.
+   * actualizar(). A ×0,25, un paso de 6 h ≈ 2 s. Capada a 1,2 s para que un
+   * scrub largo no deje eventos colgando sobre el paso siguiente.
    * (No se usa la diferencia entre marcas `t`: siempre son 6 h de dato.)
    */
   _ventanaEvento(ahora) {

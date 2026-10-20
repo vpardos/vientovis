@@ -27,6 +27,7 @@ a mano con lo que dice el TCR.
 import csv
 import gzip
 import io
+import os
 import re
 import sys
 import urllib.request
@@ -35,7 +36,9 @@ from datetime import datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-CACHE = Path("/home/ubuntu/se-dl")
+# Caché de descargas de Storm Events: bajo el repo por defecto (se puede
+# sobreescribir con la variable de entorno VIENTOVIS_SE_CACHE).
+CACHE = Path(os.environ.get("VIENTOVIS_SE_CACHE", str(RAIZ / ".cache" / "se-dl")))
 BASE = "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles"
 
 # tormenta -> año, patrón del relato, ventana temporal del episodio

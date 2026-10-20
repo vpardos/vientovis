@@ -142,6 +142,13 @@ const Datos = {
     return this.CAT_COLORES[Math.max(0, Math.min(5, cat | 0))];
   },
 
+  /* Escapa texto crudo para interpolación segura en HTML/atributos
+   * (una sola implementación: la usan app.js y mapa.js). */
+  escapar(s) {
+    return String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+
   fmtEntero(n) {
     return Math.round(+n || 0).toLocaleString('es-ES');
   },
@@ -167,13 +174,17 @@ const Datos = {
     return '$' + this.fmtEntero(n) + ' USD';
   },
 
-  /* Versión corta para ejes y deltas: "$125 mil M" / "$350 M". */
+  /* Versión corta para ejes y deltas: "$125 mil M" / "$350 M" / "$350.000".
+   * < $1 M va como entero: decir «$0 M» para importes pequeños es falso. */
   fmtUSDCorto(v) {
     const n = +v || 0;
     if (Math.abs(n) >= 1e9) {
       return '$' + new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 }).format(n / 1e9) + ' mil M';
     }
-    return '$' + this.fmtEntero(n / 1e6) + ' M';
+    if (Math.abs(n) >= 1e6) {
+      return '$' + this.fmtEntero(n / 1e6) + ' M';
+    }
+    return '$' + this.fmtEntero(n);
   },
 
   fmtDeltaEntero(d) {

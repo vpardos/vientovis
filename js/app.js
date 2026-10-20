@@ -38,7 +38,7 @@ const App = {
     } catch (err) {
       main.innerHTML =
         '<section class="carga-error"><h1>No se pudieron cargar los datos</h1>' +
-        '<p class="mono">' + String(err.message || err) + '</p>' +
+        '<p class="mono">' + Datos.escapar(String(err.message || err)) + '</p>' +
         '<p>Necesita un servidor local (p. ej. <span class="mono">python3 -m http.server</span>).</p></section>';
       return;
     }
@@ -110,6 +110,7 @@ const App = {
     this._estado = null;
     if (this._mapa) { this._mapa.destruir(); this._mapa = null; }
     this._paneles = null;
+    this._refs = null; // sin refs huérfanas: ningún pintor escribe en DOM desmontado
     const tip = document.getElementById('tooltip');
     if (tip) tip.classList.add('oculto');
   },
@@ -191,10 +192,10 @@ const App = {
       const pct = Math.round(((+t.muertes_total || 0) / maxMuertes) * 100);
       return '<li class="selec-item"><button type="button" class="selec-tarjeta' + (activo ? ' activo' : '') + '"' +
         ' data-id="' + t.id + '"' + (activo ? ' aria-current="true"' : '') +
-        ' title="' + t.nombre + ' ' + t.anio + ' · Cat ' + t.cat_pico + ' · ' +
-        Datos.fmtEntero(t.muertes_total) + ' muertes · ' + Datos.fmtUSDCorto(t.danos_total_usd) + ' en daños">' +
+        ' title="' + Datos.escapar(t.nombre + ' ' + t.anio + ' · Cat ' + t.cat_pico + ' · ' +
+        Datos.fmtEntero(t.muertes_total) + ' muertes · ' + Datos.fmtUSDCorto(t.danos_total_usd) + ' en daños') + '">' +
         '<span class="selec-sup"><span class="selec-rango mono">' + String(i + 1).padStart(2, '0') + '</span>' +
-        '<span class="selec-nombre">' + t.nombre + '</span>' +
+        '<span class="selec-nombre">' + Datos.escapar(t.nombre) + '</span>' +
         '<span class="selec-anio mono">' + t.anio + '</span></span>' +
         '<span class="selec-medias"><span class="chip chip-mini chip-cat-' + t.cat_pico + '">Cat ' + t.cat_pico + '</span>' +
         '<span class="selec-muertes">' + Datos.fmtEntero(t.muertes_total) + '<span class="selec-unidad">muertes</span></span></span>' +
@@ -252,7 +253,7 @@ const App = {
     const meta = Datos.porId(id);
     this._raizTormenta = raiz || null;
     if (!meta || !raiz) return;
-    raiz.innerHTML = '<p class="cargando mono">Cargando ' + meta.nombre + '…</p>';
+    raiz.innerHTML = '<p class="cargando mono">Cargando ' + Datos.escapar(meta.nombre) + '…</p>';
     let tor, notasTodas;
     try {
       /* las notas de tocatierra (archivo único, cacheado) viajan en paralelo
@@ -260,7 +261,7 @@ const App = {
        * tormenta se sigue sin notas */
       [tor, notasTodas] = await Promise.all([Datos.tormenta(id), this._cargarNotas()]);
     } catch (err) {
-      raiz.innerHTML = '<section class="carga-error"><h1>No se pudo cargar la tormenta</h1><p class="mono">' + (err.message || err) + '</p></section>';
+      raiz.innerHTML = '<section class="carga-error"><h1>No se pudo cargar la tormenta</h1><p class="mono">' + Datos.escapar(err.message || err) + '</p></section>';
       return;
     }
     if (!(await this._esperaRuta(token))) return;
@@ -271,6 +272,7 @@ const App = {
     const s = this._estado = {
       id: id, meta: meta, puntos: puntos,
       notas: (notasTodas && notasTodas[id]) || [], // notas de tocatierra: paneles (eje X) y ticker
+      pico: Datos.pico(puntos), tocas: tocas,      // derivados: se computan UNA vez (ficha, sucesos)
       iActivo: 0, reproducido: false, vel: 0.25, // ×0,25 FIJO (sin selector): 6 h ≈ 2 s
       fichaAbierta: false,
       simT: +puntos[0].d, raf: null, ultimoTs: null, tooltipAnclado: false,
@@ -291,7 +293,7 @@ const App = {
     raiz.innerHTML =
       '<section class="tormenta">' +
       '<div class="tormenta-cabecera">' +
-      '<h2 class="tormenta-titulo">' + meta.nombre + ' <span class="tormenta-anio">' + meta.anio + '</span></h2>' +
+      '<h2 class="tormenta-titulo">' + Datos.escapar(meta.nombre) + ' <span class="tormenta-anio">' + meta.anio + '</span></h2>' +
       '<span class="chip chip-intensidad chip-cat-' + meta.cat_pico + '">Cat ' + meta.cat_pico + '</span>' +
       '<div class="tormenta-stats mono">' +
       '<span class="ts-item"><b>' + Datos.fmtEntero(meta.muertes_total) + '</b> muertes</span>' +
@@ -392,13 +394,16 @@ const App = {
     const tt0 = setTimeout(fijaAltura, 80);
     this._limpieza.push(() => clearTimeout(tt0));
 
-    /* redibujar en resize (con pequeña espera) */
-    this._al('resize', (() => {
-      let t; return () => {
-        clearTimeout(t);
-        t = setTimeout(() => { fijaAltura(); if (this._estado) { this._paneles = Paneles.crearPanelTormenta(colPaneles, { puntos: puntos, notas: s.notas, alHover: (i, ev) => this._setHover(i, ev), alSalida: () => this._salidaHover(), alFija: i => this._alFijar(i) }); this._paneles.setActivo(s.iActivo); } }, 160);
-      };
-    })());
+    /* redibujar en resize (con pequeña espera). El debounce vive fuera del
+     * closure para poder cancelarlo en _desmontar: si la tormenta cambia
+     * dentro de la ventana de 160 ms, el timeout NO debe re-crear paneles
+     * sobre el DOM desmontado de la vista anterior. */
+    let tResize = null;
+    this._al('resize', () => {
+      clearTimeout(tResize);
+      tResize = setTimeout(() => { fijaAltura(); if (this._estado) { this._paneles = Paneles.crearPanelTormenta(colPaneles, { puntos: puntos, notas: s.notas, alHover: (i, ev) => this._setHover(i, ev), alSalida: () => this._salidaHover(), alFija: i => this._alFijar(i) }); this._paneles.setActivo(s.iActivo); } }, 160);
+    });
+    this._limpieza.push(() => clearTimeout(tResize));
 
     /* --- reproductor --- */
     const btnPlay = document.getElementById('btn-play');
@@ -483,6 +488,10 @@ const App = {
           await this.motor.iniciar();
           this._conAudio('setVolumen', this._volumen);
           this._conAudio('setMudo', this._mudo);
+          /* el motor arranca en silencio (setReproduciendo=false por defecto):
+           * si la reproducción ya está corriendo (play pulsado antes de activar
+           * el audio), se sincroniza aquí; si no, el sonido espera al play */
+          this._conAudio('setReproduciendo', !!(this._estado && this._estado.reproducido));
           btn.classList.add('oculto');
           if (extra) extra.classList.remove('oculto');
         } catch (err) {
@@ -780,7 +789,7 @@ const App = {
         const dist = Math.abs(+p.d - nota.tMs);
         if (dist < mejorDist) { mejorDist = dist; mejor = i; }
       });
-      if (mejor >= 0 && mejorDist <= UMBRAL_NOTA_MS) conNota.set(mejor, nota);
+      if (mejor >= 0 && mejorDist <= UMBRAL_NOTA_MS && !conNota.has(mejor)) conNota.set(mejor, nota); // 1:1: la primera nota gana
     });
     puntos.forEach((p, i) => {
       if (!p.tocatierra) return;
@@ -798,12 +807,14 @@ const App = {
      * esa misma categoría, el pico la deja obsoleta (dedupe: sin contenido
      * repetido en puntos contiguos; el pico informa kt y cat). Nunca pisa una
      * nota del mismo punto. */
-    const pico = Datos.pico(puntos);
+    const pico = s.pico || Datos.pico(puntos);
     if (pico) {
       const ip = puntos.indexOf(pico);
       const catP = Math.max(0, Math.min(5, pico.cat_ss | 0));
-      const catAnt = Math.max(0, Math.min(5, puntos[ip - 1].cat_ss | 0));
-      const catSig = Math.max(0, Math.min(5, puntos[ip + 1].cat_ss | 0));
+      /* vecinos con guarda de límites: el pico PUEDE ser el primer o el último
+       * punto (−1 = no comparable) y jamás se accede a puntos[-1]/puntos[n] */
+      const catAnt = ip > 0 ? Math.max(0, Math.min(5, puntos[ip - 1].cat_ss | 0)) : -1;
+      const catSig = ip < n - 1 ? Math.max(0, Math.min(5, puntos[ip + 1].cat_ss | 0)) : -1;
       const yaHay = eventos.get(ip);
       if (ip > 0 && ip < n - 1 && catP >= catAnt && catP >= catSig && !(yaHay && yaHay.tipo === 'nota')) {
         const vecino = eventos.get(ip - 1);
@@ -1043,8 +1054,8 @@ const App = {
     const p = s.puntos[s.iActivo];
     const ant = s.iActivo > 0 ? s.puntos[s.iActivo - 1] : null;
     const meta = s.meta;
-    const pico = Datos.pico(s.puntos);
-    const tocas = Datos.puntosTocatierra(s.puntos);
+    const pico = s.pico;       // precomputados al montar la tormenta (s)
+    const tocas = s.tocas;
     const dMuertes = ant ? p.muertes_acum - ant.muertes_acum : 0;
     const dDanos = ant ? p.danos_acum_usd - ant.danos_acum_usd : 0;
     const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
@@ -1066,10 +1077,10 @@ const App = {
       '<div><dt>Daños acum.</dt><dd>' + Datos.fmtUSD(p.danos_acum_usd) + ' <span class="delta">(' + Datos.fmtDeltaUSD(dDanos) + ')</span></dd></div>' +
       '</dl>' +
       (notaToca
-        ? '<p class="ficha-nota"><span class="ficha-nota-cab mono">Tocatierra · ' + notaToca.lugar + '</span>' + notaToca.nota + '</p>'
+        ? '<p class="ficha-nota"><span class="ficha-nota-cab mono">Tocatierra · ' + Datos.escapar(notaToca.lugar) + '</span>' + Datos.escapar(notaToca.nota) + '</p>'
         : '') +
       '<hr class="ficha-sep">' +
-      '<h4 class="ficha-resumen-titulo">Resumen · ' + meta.nombre + ' ' + meta.anio + '</h4>' +
+      '<h4 class="ficha-resumen-titulo">Resumen · ' + Datos.escapar(meta.nombre) + ' ' + meta.anio + '</h4>' +
       '<dl class="ficha-datos mono">' +
       '<div><dt>Pico</dt><dd>' + (pico ? 'Cat ' + pico.cat_ss + ' · ' + pico.viento_kt + ' kt · ' + Datos.fmtDiaMesAnio(pico.d) : '—') + '</dd></div>' +
       '<div><dt>Tocatierras</dt><dd>' + (tocas.length ? tocas.map(tp => Datos.fmtDia(tp.d) + ' · Cat ' + tp.cat_ss).join('<br>') : '—') + '</dd></div>' +

@@ -84,21 +84,31 @@ const MapaTormenta = {
       color: this.CARRIL_OSCURO, weight: maxPeso + 4, opacity: 0.95,
       lineJoin: 'round', lineCap: 'round', interactive: false
     }).addTo(mapa);
-    for (let i = 0; i < puntos.length - 1; i++) {
-      const p = puntos[i], q = puntos[i + 1];
-      const cat = Math.max(p.cat_ss, q.cat_ss);
+    /* Los segmentos CONTIGUOS de igual categoría (la de `max` de cada par de
+     * puntos, igual criterio que antes) se fusionan en un solo polyline: el
+     * mismo dibujo con una capa por CAMBIO de categoría en vez de 2 por punto
+     * (una tormenta de 74 puntos pasa de ~146 capas a unas pocas). */
+    for (let i = 0; i < puntos.length - 1; ) {
+      const cat = Math.max(puntos[i].cat_ss, puntos[i + 1].cat_ss);
+      const coords = [[puntos[i].lat, puntos[i].lon]];
+      let j = i;
+      while (j < puntos.length - 1 && Math.max(puntos[j].cat_ss, puntos[j + 1].cat_ss) === cat) {
+        coords.push([puntos[j + 1].lat, puntos[j + 1].lon]);
+        j++;
+      }
       const peso = 3 + cat * 0.8;
-      L.polyline([[p.lat, p.lon], [q.lat, q.lon]], {
+      L.polyline(coords, {
         color: cat >= 3 ? this.CARRIL_CLARO : this.CARRIL_INTERIOR_OSCURO,
         weight: peso + 2, opacity: 0.92,
         lineJoin: 'round', lineCap: 'round', interactive: false
       }).addTo(mapa);
-      L.polyline([[p.lat, p.lon], [q.lat, q.lon]], {
+      L.polyline(coords, {
         color: Datos.colorCat(cat),
         weight: peso,
         opacity: 0.96,
         interactive: false
       }).addTo(mapa);
+      i = j;
     }
 
     /* --- tocatierras: círculo con borde claro + etiqueta "timestamp" ---
@@ -131,8 +141,7 @@ const MapaTormenta = {
       return (mejor && mejorDist <= UMBRAL_NOTA_MS) ? mejor : null;
     };
 
-    const escapar = (s) => String(s).replace(/[&<>"']/g, c => (
-      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const escapar = (s) => Datos.escapar(s); // helper único en Datos (mismo criterio que app.js)
 
     /* fecha/hora corta del tocatierra: «29 ago · 11:10 UTC» */
     const fmtHoraCorta = (d) => Datos.fmtDia(d) + ' · ' +
@@ -470,6 +479,7 @@ const MapaTormenta = {
     const encuadre = L.latLngBounds(puntos.map(p => [p.lat, p.lon]));
     const PAD = [12, 12];
     let zSeguimiento = null; // nivel cercano constante del acompañamiento (C4)
+    let volando = false;     // flyTo de zoomInicio en curso: seguir() no debe cortarlo con setView
     const encajar = () => {
       const anterior = mapa.options.zoomSnap;
       mapa.options.zoomSnap = 0.001; // ajuste fino puntual
@@ -482,8 +492,10 @@ const MapaTormenta = {
     encajar();
 
     /* El zoom de usuario (control/doble clic, grid zoomSnap 0.5) reescala el
-     * ícono: conserva su tamaño aparente sobre el terreno. */
-    mapa.on('zoomend', refrescarTamanoZoom);
+     * ícono: conserva su tamaño aparente sobre el terreno. zoomend también
+     * marca el fin de cualquier vuelo (flyTo de zoomInicio): desde ahí
+     * seguir() vuelve a acompañar el punto activo. */
+    mapa.on('zoomend', () => { volando = false; refrescarTamanoZoom(); });
 
     return {
       mapa: mapa,
@@ -579,6 +591,7 @@ const MapaTormenta = {
         if (!p) return;
         zSeguimiento = Math.min(zoomBase + 2, 8);
         if (saltarSinAnim()) { mapa.setView([p.lat, p.lon], zSeguimiento, { animate: false }); return; }
+        volando = true; // hasta zoomend: ningún setView puede cortar el vuelo
         mapa.flyTo([p.lat, p.lon], zSeguimiento, { duration: 1, easeLinearity: 0.28 });
       },
 
@@ -588,6 +601,7 @@ const MapaTormenta = {
        * continuo); sin él (frac=0) centra el punto exacto i (cambio de punto). */
       seguir(i, frac) {
         if (!puntos[i]) return;
+        if (volando) return; // zoomInicio en curso: un setView lo cortaría en seco
         const v = interp(i, frac);
         if (zSeguimiento == null) zSeguimiento = Math.min(zoomBase + 2, 8);
         const destino = L.latLng(v.lat, v.lon);

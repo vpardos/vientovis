@@ -28,8 +28,10 @@ import urllib.parse
 import urllib.request
 from collections import defaultdict
 
-ROOT = "/home/ubuntu/Universidad/26-02/vientovis"
-SE_DIR = "/home/ubuntu/.hermes/cache/scratch/se"
+# Raíz del proyecto (el script vive en scripts/): portable a cualquier checkout.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Caché local de los CSV de Storm Events (sobreescribible con VIENTOVIS_SE_DIR).
+SE_DIR = os.environ.get("VIENTOVIS_SE_DIR", os.path.join(ROOT, ".cache", "se"))
 NFIP = "https://www.fema.gov/api/open/v3/NfipClaims"
 UA = {"User-Agent": "vientovis-research/1.0"}
 
