@@ -192,7 +192,7 @@ Las trayectorias y variables meteorológicas (posición, viento, presión, estad
 
     \vspace{0.15cm}
     \noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
-    Se adoptó reemplazar las cifras de Storm Events por los totales verificados de los \textit{Tropical Cyclone Reports} del NHC (materializado en la V2). Se adoptó de inmediato cambiar la paleta de categorías a una rampa semáforo verde$\to$rojo (commit \texttt{02cf226}, 8 de octubre) y estandarizar el tamaño del glifo respecto del zoom del mapa para evitar distorsiones perceptuales de área (commit \texttt{3a9d0df}), junto con una revisión de textos (\texttt{e79e762}). Se descartó mantener la vista de comparación de dos huracanes y la galería de mini-mapas para evitar saturación visual y pérdida de foco narrativo (ambas eliminadas en la V2).
+    Se adoptó reemplazar las cifras de Storm Events por los totales verificados de los \textit{Tropical Cyclone Reports} del NHC (materializado en la V2). Se adoptó de inmediato cambiar la paleta de categorías a una rampa semáforo verde$\to$rojo (commit \texttt{02cf226}, 8 de octubre) y estandarizar el tamaño del glifo respecto del zoom del mapa para evitar distorsiones perceptuales de área (commit \texttt{3a9d0df}), junto con una revisión de textos (\texttt{e79e762}). Se descartó mantener la vista de comparación de dos huracanes y la galería de minimapas para evitar saturación visual y pérdida de foco narrativo (ambas eliminadas en la V2).
 \end{revisionbox}
 
 \vspace{0.4cm}
@@ -211,7 +211,7 @@ Las trayectorias y variables meteorológicas (posición, viento, presión, estad
 
     \noindent\textbf{Qué cambió:}
     \begin{itemize}
-        \item Rediseño integral de la interfaz (commit \texttt{3ac55b5}): la galería de mini-mapas desaparece y la vista de tormenta pasa a ser la portada, con héroe editorial, frase «potencia $\neq$ destructividad» computada del índice, selector de los 10 huracanes ordenado por muertes con barra de impacto y velocidad de reproducción fija a 0,25$\times$.
+        \item Rediseño integral de la interfaz (commit \texttt{3ac55b5}): la galería de minimapas desaparece y la vista de tormenta pasa a ser la portada, con héroe editorial, frase «potencia $\neq$ destructividad» computada del índice, selector de los 10 huracanes ordenado por muertes con barra de impacto y velocidad de reproducción fija a 0,25$\times$.
         \item Notas de tocatierra curadas (\texttt{data/notas-tocatierras.json}) emparejadas con cada tocatierra: etiquetas informativas en el mapa y marcas de fecha y lugar bajo el eje temporal del panel de daños.
         \item Paleta de categoría definitiva (rampa de rojos monotónica en oscuridad, distinguible en deuteranopía) y análisis algorítmico RMS+ZCR de las grabaciones de viento para elegir tramos de bucle sin costuras audibles.
         \item Cifras verificadas contra los TCR del NHC (commits \texttt{d7e0a7f} y \texttt{983bbdb}): la mortalidad total pasa de 1.854 (Storm Events) a 5.626 verificados, integrando el impacto letal en Puerto Rico y las Antillas (caso crítico: María 2017 subió de 20 a 3.022 víctimas, de las que la página muestra 302 en su ventana activa).
