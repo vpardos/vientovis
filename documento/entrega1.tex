@@ -171,14 +171,6 @@ Las trayectorias y variables meteorológicas (posición, viento, presión, estad
         \item Motor sonoro con Web Audio API: bucles de grabaciones reales de viento con crossfade por categoría, dron continuo modulado por presión atmosférica, one-shots de impacto y un oscilador armónico agudo para la intensificación rápida.
         \item Controles de reproducción temporal: play/pausa, scrubber y selector de velocidad (0,25$\times$ y 0,5$\times$).
     \end{itemize}
-
-    \vspace{0.15cm}
-    \noindent\textbf{Por qué cambió — el rationale:}
-    Se adoptó el mantra de Shneiderman (\textit{overview first, zoom and filter, details on demand}) para guiar la atención sin sobrecarga cognitiva. El alineamiento temporal de paneles aplica la ley de Gestalt de destino común y proximidad, permitiendo correlacionar visualmente el pico de viento con el salto en las curvas de impacto. El eje de presión se invirtió siguiendo la convención meteorológica estándar (menor presión = mayor intensidad). La sonificación mapeó la presión central a la frecuencia del dron para traducir físicamente la acumulación de energía ciclónica.
-
-    \vspace{0.15cm}
-    \noindent\textbf{Qué se descartó:}
-    Se descartaron librerías comerciales como Plotly o interfaces preconfiguradas para mantener control absoluto sobre el renderizado vectorial D3.js y asegurar latencia cero con el subsistema de Web Audio.
 \end{versionbox}
 
 \vspace{0.4cm}
