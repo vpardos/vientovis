@@ -188,11 +188,11 @@ Las trayectorias y variables meteorológicas (posición, viento, presión, estad
 % ==============================================================================
 \begin{revisionbox}{R1 — Primera Revisión con el Equipo Docente}{Principios de octubre de 2026}
     \noindent\textbf{Fecha:} 5 de octubre de 2026.\\
-    \textbf{Síntesis de lo discutido:} Se presentó la V1 completamente interactiva y sonora. El equipo docente valoró el sincronismo de los paneles y la sonificación de la presión. Sin embargo, se identificaron tres aspectos críticos: 1) las cifras de muertes y daños provenían de NOAA Storm Events, que solo cubre EE.\,UU. y subestima gravemente (María 2017 mostraba 20 muertes frente a las $\sim$3.000 del informe oficial), 2) la paleta de categorías (derivada de \textit{viridis}) generaba confusión de contraste contra el mapa, y 3) el tamaño del marcador del huracán fluctuaba de forma inconsistente durante el recorrido.
+    \textbf{Síntesis de lo discutido:} Se presentó la V1 completamente interactiva y sonora. El equipo docente valoró el sincronismo de los paneles y la sonificación de la presión. Sin embargo, se identificó como problema la paleta de categorías (derivada de \textit{viridis}), que generaba confusión de contraste contra el mapa. Además, se solicitó la aplicación del mantra de Shneiderman para una mejor comprensión.
 
     \vspace{0.15cm}
     \noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
-    Se adoptó reemplazar las cifras de Storm Events por los totales verificados de los \textit{Tropical Cyclone Reports} del NHC (materializado en la V2). Se adoptó de inmediato cambiar la paleta de categorías a una rampa semáforo verde$\to$rojo (commit \texttt{02cf226}, 8 de octubre) y estandarizar el tamaño del glifo respecto del zoom del mapa para evitar distorsiones perceptuales de área (commit \texttt{3a9d0df}), junto con una revisión de textos (\texttt{e79e762}). Se descartó mantener la vista de comparación de dos huracanes y la galería de minimapas para evitar saturación visual y pérdida de foco narrativo (ambas eliminadas en la V2).
+    Se adoptó de inmediato cambiar la paleta de categorías a una rampa semáforo verde$\to$rojo (commit \texttt{02cf226}, 8 de octubre). Se descartó mantener la vista de comparación de dos huracanes y la galería de minimapas para evitar saturación visual y pérdida de foco narrativo.
 \end{revisionbox}
 
 \vspace{0.4cm}
@@ -211,12 +211,11 @@ Las trayectorias y variables meteorológicas (posición, viento, presión, estad
 
     \noindent\textbf{Qué cambió:}
     \begin{itemize}
-        \item Rediseño integral de la interfaz (commit \texttt{3ac55b5}): la galería de minimapas desaparece y la vista de tormenta pasa a ser la portada, con héroe editorial, frase «potencia $\neq$ destructividad» computada del índice, selector de los 10 huracanes ordenado por muertes con barra de impacto y velocidad de reproducción fija a 0,25$\times$.
+        \item Se adoptó el mantra de Shneiderman (\textit{overview first, zoom and filter, details on demand}) para guiar la atención sin sobrecarga cognitiva al rediseñar integralmente la interfaz (commit \texttt{3ac55b5}): la galería de minimapas desaparece y la vista de tormenta pasa a ser la portada, con héroe editorial, frase «potencia $\neq$ destructividad» computada del índice, selector de los 10 huracanes ordenado por muertes con barra de impacto y velocidad de reproducción fija a 0,25$\times$.
         \item Notas de tocatierra curadas (\texttt{data/notas-tocatierras.json}) emparejadas con cada tocatierra: etiquetas informativas en el mapa y marcas de fecha y lugar bajo el eje temporal del panel de daños.
         \item Paleta de categoría definitiva (rampa de rojos monotónica en oscuridad, distinguible en deuteranopía) y análisis algorítmico RMS+ZCR de las grabaciones de viento para elegir tramos de bucle sin costuras audibles.
         \item Cifras verificadas contra los TCR del NHC (commits \texttt{d7e0a7f} y \texttt{983bbdb}): la mortalidad total pasa de 1.854 (Storm Events) a 5.626 verificados, integrando el impacto letal en Puerto Rico y las Antillas (caso crítico: María 2017 subió de 20 a 3.022 víctimas, de las que la página muestra 302 en su ventana activa).
         \item Daños económicos re-escalados al total verificado, desagregados por país e isla afectada y fijados en el tocatierra correspondiente (ej. Katrina y Harvey en \$125.000M).
-        \item Integración de cintillos de contexto temporal inspirados en transmisiones de alerta meteorológica (ticker de sucesos).
     \end{itemize}
 
     \vspace{0.15cm}
