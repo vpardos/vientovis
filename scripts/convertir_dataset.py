@@ -20,9 +20,12 @@ SUPUESTOS / DECISIONES (contrastados con el CSV real de 492 filas / 10 tormentas
    (UTC) como "YYYY-MM-DDTHH:MM:00Z"; la app une series por marca de tiempo, no por
    índice. No hay timestamps duplicados dentro de una tormenta (el script falla si
    los hubiera, porque la unión por marca de tiempo se rompería).
-2. Estatus: LO y EX se homogeneizan a "EX"; el resto (TD/TS/HU y también WV/DB,
-   códigos transitorios de HURDAT2) se dejan "tal cual", como indica la regla.
-   La app muestra códigos desconocidos con su texto crudo (fallback de fmtEstatus).
+2. Estatus: sólo EX se muestra como "EX" (postropical). LO, WV y DB se conservan
+   tal cual: no son ciclones tropicales pero tampoco extratropicales, y la app
+   narra cada uno con su propia frase. Colapsar LO->EX hacía que la app dijera
+   "se vuelve post-tropical" donde en realidad el sistema ya era una baja presión
+   o una onda (p. ej. Harvey sobre Yucatán, 22-23 ago 2017).
+   La app muestra códigos sin etiqueta con su texto crudo (fallback de fmtEstatus).
 3. cat_ss se deriva SIEMPRE de wind_kt (regla explícita), sin excepción por estatus.
    Consecuencia esperada: puntos EX con viento >= 64 kt (Sandy 70-75 kt, Michael
    65 kt) quedan con cat_ss >= 1, a diferencia del mock que forzaba 0 para EX.
@@ -146,8 +149,14 @@ def categoria_ss(viento_kt):
 
 
 def estatus_ui(status):
-    """LO/EX -> EX (postropical); el resto tal cual (TD/TS/HU/WV/DB)."""
-    return "EX" if status in ("LO", "EX") else status
+    """Sólo EX se muestra como postropical; LO/WV/DB se conservan.
+
+    Antes se homogeneizaban LO y EX a "EX", pero no son lo mismo: EX es un ciclón
+    que perdió estructura tropical (extratropical) y LO es una baja presión que ya
+    no es ciclón. Colapsarlos hacía que la app narrara "se vuelve post-tropical"
+    sobre puntos que sólo eran remanentes —el caso de Harvey cruzando Yucatán—.
+    """
+    return status
 
 
 def id_tormenta(storm, storm_id):

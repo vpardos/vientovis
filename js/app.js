@@ -1049,7 +1049,7 @@ const App = {
     const dDanos = ant ? p.danos_acum_usd - ant.danos_acum_usd : 0;
     const cat = Math.max(0, Math.min(5, p.cat_ss | 0));
     const chipCls = cat >= 1 ? 'chip chip-cat-' + cat : 'chip chip-neutro';
-    const chipTxt = Datos.fmtCatCorto(cat);
+    const chipTxt = Datos.fmtCatCorto(cat, p.estatus);
     /* nota de tocatierra emparejada (si el punto activo es un tocatierra
      * explicado en data/notas-tocatierras.json), ya cargada por el mapa */
     const notaToca = (this._mapa && this._mapa.notaDePunto) ? this._mapa.notaDePunto(s.iActivo) : null;
@@ -1099,7 +1099,7 @@ const App = {
     /* chip con fondo de intensidad y texto blanco (ver .rep-valores
      * .chip-cat-* en css): SIEMPRE chip-cat-N, cat 0 incluida */
     const chipCls = 'chip chip-cat-' + cat;
-    const chipTxt = Datos.fmtCatCorto(cat);
+    const chipTxt = Datos.fmtCatCorto(cat, p.estatus);
     const dMu = ant ? p.muertes_acum - ant.muertes_acum : 0;
     const dDa = ant ? p.danos_acum_usd - ant.danos_acum_usd : 0;
     /* la línea cierra en los acumulados con su delta: «Muertes N (Δ d) ·

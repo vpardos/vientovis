@@ -17,7 +17,12 @@ const Datos = {
     TD: 'Depresión tropical',
     TS: 'Tormenta tropical',
     HU: 'Huracán',
-    EX: 'Postropical'
+    EX: 'Postropical',
+    /* Códigos de HURDAT2 que NO son ciclones tropicales ni extratropicales:
+     * se nombran para que la línea de tiempo no muestre siglas sueltas. */
+    WV: 'Onda tropical',
+    LO: 'Baja presión',
+    DB: 'Disturbio'
   },
 
   indice: null,
@@ -182,7 +187,11 @@ const Datos = {
   },
 
   /* Cat 0 del mock cubre TD/TS: chip neutro propio. */
-  fmtCatCorto(cat) {
+  fmtCatCorto(cat, estatus) {
+    /* Un sistema que ya no es ciclón tropical (onda, baja presión, disturbio) no
+     * tiene categoría Saffir–Simpson: su cat_ss es 0 por construcción, y rotularlo
+     * «T. tropical» contradice al estado que se muestra justo al lado. */
+    if (estatus === 'WV' || estatus === 'LO' || estatus === 'DB') return 'No tropical';
     return (cat | 0) >= 1 ? 'Cat ' + (cat | 0) : 'T. tropical';
   },
 
