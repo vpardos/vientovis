@@ -97,12 +97,40 @@ fecha, no a las 00:00Z, así que la curva salta en el marcador.
 caen el mismo día que otro acumulan en el primero de ese día, porque el convertidor
 acumula una sola vez por fecha.
 
+## Ajuste por inflación — dólares de 2024
+
+Los totales de los TCR son **dólares nominales del año del evento**. Para que las
+tormentas de 2005–2024 se comparen en poder de compra común, `distribuir_danos.py`
+las re-escala a **dólares de 2024** con el **CPI-U** (índice de precios al consumidor
+de EE. UU., promedio anual, serie CUUR0000SA0, base 1982-84 = 100, BLS; valores en
+`data/SOURCES.md`). El desglose por país se ajusta con el mismo factor del año, así
+cada tocatierra conserva su proporción exacta.
+
+| Tormenta | Total nominal (TCR) | Factor | Total en USD 2024 |
+|---|---:|---:|---:|
+| Katrina 2005 | 125 000 M$ | ×1,6062 | **200 774 M$** |
+| Harvey 2017 | 125 000 M$ | ×1,2797 | **159 967 M$** |
+| Ian 2022 | 112 900 M$ | ×1,0719 | **121 014 M$** |
+| María 2017 | 91 430 M$ | ×1,2797 | **117 006 M$** |
+| Ida 2021 | 75 250 M$ | ×1,1577 | **87 113 M$** |
+| Helene 2024 | 78 700 M$ | ×1,0000 | 78 700 M$ |
+| Sandy 2012 | 52 880 M$ | ×1,3663 | **72 249 M$** |
+| Irma 2017 | 53 095 M$ | ×1,2797 | **67 948 M$** |
+| Ike 2008 | 33 145 M$ | ×1,4570 | **48 291 M$** |
+| Michael 2018 | 25 000 M$ | ×1,2492 | **31 231 M$** |
+
+Consecuencia visible: Katrina y Harvey **dejaban de empatar** en daños —en poder de
+compra real, Katrina es con diferencia la tormenta más costosa del set—. El nominal
+y el factor de cada tormenta quedan en las columnas `danos_total_usd_nominal` y
+`factor_inflacion` de `danos_verificados.csv`.
+
 ## Advertencias de método (importante)
 
-1. **Los importes son dólares nominales del año del evento**, no ajustados por
-   inflación. Comparar 125 000 M$ de Katrina (2005) con 78 700 M$ de Helene (2024) no
-   es comparar poder de compra: en dólares de 2022 Katrina equivaldría a 186 300 M$.
-   Si en la página se ordena por daños, **conviene decirlo**.
+1. **Los importes del TCR son dólares nominales del año del evento; el pipeline los
+   ajusta a dólares de 2024 con el CPI-U** (ver la sección anterior). La app muestra
+   el total ajustado. Los datasets crudos de referencia (`data/damage`, `data/impacts`,
+   NFIP y Storm Events) siguen en dólares nominales: son fuente, no cifras de
+   exhibición.
 
 2. **Los totales son casi siempre de EE. UU.** Solo María, Irma, Sandy e Ike tienen
    componentes fuera del continente. Katrina (Bahamas), Harvey y Michael dañaron poco

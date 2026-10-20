@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/TeX Live for SUSE Linux) (preloaded format=pdflatex 2026.10.20)  20 OCT 2026 15:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/TeX Live for SUSE Linux) (preloaded format=pdflatex 2026.10.20)  20 OCT 2026 15:54
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -948,14 +948,17 @@ LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OT1+lmtt on input line 
-157.
+150.
 
 (/usr/share/texmf/tex/latex/lm/ot1lmtt.fd
 File: ot1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
+) [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/
+enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-ts1.enc}
+
+{/usr/share/texmf/fonts/enc/dvips/lm/lm-rmsc.enc}]
 LaTeX Font Info:    Font shape `OT1/lmtt/bx/n' in size <10.95> not available
 (Font)              Font shape `OT1/lmtt/b/n' tried instead on input line 157.
-<figuras/captura_v1.png, id=71, 1649.16125pt x 722.7pt>
+<figuras/captura_v1.png, id=85, 1649.16125pt x 722.7pt>
 File: figuras/captura_v1.png Graphic file (type png)
 <use figuras/captura_v1.png>
 Package pdftex.def Info: figuras/captura_v1.png  used on input line 161.
@@ -1006,12 +1009,8 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 (/usr/share/texmf/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
-) [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/
-enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-ts1.enc}
-
-{/usr/share/texmf/fonts/enc/dvips/lm/lm-rmsc.enc}] [2{/usr/share/texmf/fonts/en
-c/dvips/lm/lm-rmtt.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathsy.enc} <./f
-iguras/captura_v1.png>]
+) [2{/usr/share/texmf/fonts/enc/dvips/lm/lm-rmtt.enc}{/usr/share/texmf/fonts/en
+c/dvips/lm/lm-mathsy.enc} <./figuras/captura_v1.png>]
 <figuras/captura_v2.png, id=98, 803.0pt x 534.99875pt>
 File: figuras/captura_v2.png Graphic file (type png)
 <use figuras/captura_v2.png>
@@ -1059,13 +1058,13 @@ Package rerunfilecheck Info: File `entrega1.out' has not changed.
 (rerunfilecheck)             Checksum: 0D5B8C5EE6FB873D88BE94C6CCB61A69;3583.
  ) 
 Here is how much of TeX's memory you used:
- 31402 strings out of 468581
- 610354 string characters out of 5446527
- 1086399 words of memory out of 5000000
- 59412 multiletter control sequences out of 15000+600000
- 705443 words of font info for 205 fonts, out of 8000000 for 9000
+ 31399 strings out of 468581
+ 610320 string characters out of 5446527
+ 1083399 words of memory out of 5000000
+ 59411 multiletter control sequences out of 15000+600000
+ 705245 words of font info for 204 fonts, out of 8000000 for 9000
  475 hyphenation exceptions out of 8191
- 98i,12n,108p,1005b,992s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 98i,12n,108p,1235b,992s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf/fonts/type1/public/lm/lmbx10.pfb></usr/share/texmf/fonts/ty
 pe1/public/lm/lmbx12.pfb></usr/share/texmf/fonts/type1/public/lm/lmcsc10.pfb></
 usr/share/texmf/fonts/type1/public/lm/lmr10.pfb></usr/share/texmf/fonts/type1/p
@@ -1075,7 +1074,7 @@ lm/lmsy10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy5.pfb></usr/share/tex
 mf/fonts/type1/public/lm/lmsy6.pfb></usr/share/texmf/fonts/type1/public/lm/lmtk
 10.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt10.pfb></usr/share/texmf/fon
 ts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on entrega1.pdf (9 pages, 1740436 bytes).
+Output written on entrega1.pdf (9 pages, 1741993 bytes).
 PDF statistics:
  223 PDF objects out of 1000 (max. 8388607)
  173 compressed objects within 2 object streams

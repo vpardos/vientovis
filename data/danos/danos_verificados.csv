@@ -1,11 +1,11 @@
-tormenta,anio,danos_total_usd,informe_tcr,url_tcr,nota
-Katrina,2005,125000000000,AL122005,https://www.nhc.noaa.gov/data/tcr/AL122005_Katrina.pdf,"EE. UU., dólares de 2005 (NCEI); intervalo 97 400–145 500 M$. Incluye Florida, Luisiana y Misisipi"
-Ike,2008,33145000000,AL092008,https://www.nhc.noaa.gov/data/tcr/AL092008_Ike.pdf,EE. UU. 29 520 M$ (doblado del daño asegurado) + Cuba 3 500 M$ + Bahamas/Turcas y Caicos 125 M$
-Sandy,2012,52880000000,AL182012,https://www.nhc.noaa.gov/data/tcr/AL182012_Sandy.pdf,EE. UU. 50 000 M$ (preliminar) + Cuba 2 000 M$ + Haití 750 M$ + Jamaica 100 M$ + Rep. Dominicana 30 M$
-Harvey,2017,125000000000,AL092017,https://www.nhc.noaa.gov/data/tcr/AL092017_Harvey.pdf,EE. UU. (NCEI); intervalo 90 000–160 000 M$
-Irma,2017,53095000000,AL112017,https://www.nhc.noaa.gov/data/tcr/AL112017_Irma.pdf,EE. UU. 50 000 M$ + San Martín 1 500 M$ + Islas Vírgenes (EE.UU./Brit.) 500 M$ + San Bartolomé 480 M$ + Barbuda 225 M$ + Cuba 200 M$ + Anguila 190 M$
-Maria,2017,91430000000,AL152017,https://www.nhc.noaa.gov/data/tcr/AL152017_Maria.pdf,Puerto Rico + Islas Vírgenes EE.UU. 90 000 M$ (NCEI; intervalo 65 000–115 000 M$) + Dominica 1 310 M$ + Guadalupe 120 M$
-Michael,2018,25000000000,AL142018,https://www.nhc.noaa.gov/data/tcr/AL142018_Michael.pdf,"EE. UU.: Florida 18 400 M$, Georgia 4 700 M$, resto 1 100 M$"
-Ida,2021,75250000000,AL092021,https://www.nhc.noaa.gov/data/tcr/AL092021_Ida.pdf,EE. UU. 75 000 M$ (NCEI) + Cuba 250 M$
-Ian,2022,112900000000,AL092022,https://www.nhc.noaa.gov/data/tcr/AL092022_Ian.pdf,Solo EE. UU. (NCEI); intervalo 86 800–135 900 M$. El informe dice que NO hay estimación monetaria para Cuba
-Helene,2024,78700000000,AL092024,https://www.nhc.noaa.gov/data/tcr/AL092024_Helene.pdf,EE. UU. (NCEI)
+tormenta,anio,danos_total_usd_nominal,danos_total_usd,factor_inflacion,informe_tcr,url_tcr,nota
+Katrina,2005,125000000000,200773809524,1.606190,AL122005,https://www.nhc.noaa.gov/data/tcr/AL122005_Katrina.pdf,"EE. UU., dólares de 2005 (NCEI); intervalo 97 400–145 500 M$. Incluye Florida, Luisiana y Misisipi"
+Ike,2008,33145000000,48291114871,1.456965,AL092008,https://www.nhc.noaa.gov/data/tcr/AL092008_Ike.pdf,EE. UU. 29 520 M$ (doblado del daño asegurado) + Cuba 3 500 M$ + Bahamas/Turcas y Caicos 125 M$
+Sandy,2012,52880000000,72248727406,1.366277,AL182012,https://www.nhc.noaa.gov/data/tcr/AL182012_Sandy.pdf,EE. UU. 50 000 M$ (preliminar) + Cuba 2 000 M$ + Haití 750 M$ + Jamaica 100 M$ + Rep. Dominicana 30 M$
+Harvey,2017,125000000000,159967056952,1.279736,AL092017,https://www.nhc.noaa.gov/data/tcr/AL092017_Harvey.pdf,EE. UU. (NCEI); intervalo 90 000–160 000 M$
+Irma,2017,53095000000,67947607111,1.279736,AL112017,https://www.nhc.noaa.gov/data/tcr/AL112017_Irma.pdf,EE. UU. 50 000 M$ + San Martín 1 500 M$ + Islas Vírgenes (EE.UU./Brit.) 500 M$ + San Bartolomé 480 M$ + Barbuda 225 M$ + Cuba 200 M$ + Anguila 190 M$
+Maria,2017,91430000000,117006304137,1.279736,AL152017,https://www.nhc.noaa.gov/data/tcr/AL152017_Maria.pdf,Puerto Rico + Islas Vírgenes EE.UU. 90 000 M$ (NCEI; intervalo 65 000–115 000 M$) + Dominica 1 310 M$ + Guadalupe 120 M$
+Michael,2018,25000000000,31230610855,1.249224,AL142018,https://www.nhc.noaa.gov/data/tcr/AL142018_Michael.pdf,"EE. UU.: Florida 18 400 M$, Georgia 4 700 M$, resto 1 100 M$"
+Ida,2021,75250000000,87113323431,1.157652,AL092021,https://www.nhc.noaa.gov/data/tcr/AL092021_Ida.pdf,EE. UU. 75 000 M$ (NCEI) + Cuba 250 M$
+Ian,2022,112900000000,121014464472,1.071873,AL092022,https://www.nhc.noaa.gov/data/tcr/AL092022_Ian.pdf,Solo EE. UU. (NCEI); intervalo 86 800–135 900 M$. El informe dice que NO hay estimación monetaria para Cuba
+Helene,2024,78700000000,78700000000,1.000000,AL092024,https://www.nhc.noaa.gov/data/tcr/AL092024_Helene.pdf,EE. UU. (NCEI)

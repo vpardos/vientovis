@@ -81,6 +81,22 @@ PDF de los TCR** y recogidas en:
 - `data/muertes/muertes_verificadas.csv` y `data/danos/danos_verificados.csv` —
   las tablas, con la cita y la URL de cada informe.
 
+## Inflación
+
+### CPI-U (BLS) — para comparar dólares entre años
+
+Los TCR publican los daños en **dólares nominales del año del evento**. El pipeline
+(`scripts/distribuir_danos.py`) los ajusta a **dólares de 2024** con el índice de
+precios al consumidor de EE. UU.:
+
+- Serie: **CPI-U, promedio anual**, CUUR0000SA0, base 1982-84 = 100.
+- Portal: https://www.bls.gov/cpi/ · tabla histórica de consulta:
+  https://cpichart.com/historical-cpi/
+- Regla: `USD_2024 = USD_año × (CPI_U[2024] / CPI_U[año])`.
+- Valores usados (verificados el 2026-10-20 contra la tabla histórica):
+  2005: 195,3 · 2008: 215,303 · 2012: 229,594 · 2017: 245,120 ·
+  2018: 251,107 · 2021: 270,970 · 2022: 292,655 · 2024: 313,689.
+
 Para las **muertes individuales con fecha** (que es lo que permite una curva diaria
 real) sí hay un fichero masivo de NOAA, el de víctimas de Storm Events:
 https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/

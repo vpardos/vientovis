@@ -35,6 +35,15 @@ tormenta, reescalada. Si esa forma no sirve —María solo tiene un día con dat
 reparte con un **decaimiento desde el último tocatierra**, que es como se acumulan
 los daños: destrucción de golpe y pérdidas que se van sumando.
 
+Ajuste por inflación
+--------------------
+Los totales de los TCR vienen en **dólares nominales del año del evento**. Este
+script los re-escala a **dólares de 2024** con el CPI-U (promedio anual, serie
+CUUR0000SA0, base 1982-84=100, BLS), de modo que la app compara tormentas de
+2005–2024 en poder de compra común. El desglose por país (COMPONENTES) se ajusta
+con el mismo factor del año, así cada tocatierra conserva su proporción exacta.
+`danos_verificados.csv` guarda el total nominal Y el ajustado, con el factor usado.
+
 Uso:
     python3 scripts/distribuir_danos.py --dry-run
     python3 scripts/distribuir_danos.py
@@ -98,6 +107,28 @@ COMPONENTES = {
               ("20170919", 120 * M, "Guadalupe")],
     "IDA": [("20210827", 250 * M, "Cuba")],
 }
+
+# --- Ajuste por inflación: dólares del año del evento -> dólares de 2024 ----
+# CPI-U, promedio anual, serie CUUR0000SA0 (base 1982-84=100), BLS.
+# Valores verificados contra la tabla histórica (ver data/SOURCES.md, «Inflación»).
+ANIO_REFERENCIA = 2024
+CPI_U = {
+    2005: 195.3,
+    2008: 215.303,
+    2012: 229.594,
+    2017: 245.120,
+    2018: 251.107,
+    2021: 270.970,
+    2022: 292.655,
+    2024: 313.689,
+}
+
+
+def factor_inflacion(anio):
+    """Factor para pasar dólares del año del evento a dólares de ANIO_REFERENCIA."""
+    if anio not in CPI_U:
+        raise SystemExit(f"ERROR: sin CPI-U para {anio}; añadir su promedio anual a CPI_U")
+    return CPI_U[ANIO_REFERENCIA] / CPI_U[anio]
 
 
 def resto_mayor(valores, total):
@@ -181,14 +212,16 @@ def main():
             print(f"  AVISO: {storm} sin daño verificado; se deja igual", file=sys.stderr)
             continue
 
-        total = VERIFICADOS[storm]["total"]
+        total_nominal = VERIFICADOS[storm]["total"]
+        factor = factor_inflacion(VERIFICADOS[storm]["anio"])
+        total = int(round(total_nominal * factor))
         forzados = defaultdict(float)
         for fstr, imp, lugar in COMPONENTES.get(storm, []):
             d = datetime.strptime(fstr, "%Y%m%d").date()
             if d not in fechas:
                 print(f"  AVISO {storm}: {fstr} ({lugar}) fuera del recorrido", file=sys.stderr)
                 continue
-            forzados[fstr] += imp
+            forzados[fstr] += int(round(imp * factor))
         forzados = dict(forzados)
 
         puesto = sum(forzados.values())
@@ -217,13 +250,14 @@ def main():
             valores[fstr] = valores.get(fstr, 0) + int(round(imp))
         nuevas[storm] = valores
         objetivos[storm] = total
-        informe.append((storm, total, len([v for v in valores.values() if v]),
+        informe.append((storm, total_nominal, total, factor,
+                        len([v for v in valores.values() if v]),
                         len(forzados), origen))
 
-    print(f"\n{'tormenta':<9}{'total':>11}{'días':>6}{'fijados':>9}   reparto")
-    print("-" * 78)
-    for s, t, n, nf, o in sorted(informe, key=lambda x: -x[1]):
-        print(f"{s:<9}{t/1e9:>10.1f}B{n:>6}{nf:>9}   {o}")
+    print(f"\n{'tormenta':<9}{'nominal':>11}{'USD 2024':>11}{'factor':>9}{'días':>6}{'fijados':>9}   reparto")
+    print("-" * 92)
+    for s, tn, t, f, n, nf, o in sorted(informe, key=lambda x: -x[2]):
+        print(f"{s:<9}{tn/1e9:>10.1f}B{t/1e9:>10.1f}B{f:>9.4f}{n:>6}{nf:>9}   {o}")
 
     if dry:
         print("\n(--dry-run: no se ha escrito nada)")
@@ -256,10 +290,13 @@ def main():
     DESTINO_CSV.parent.mkdir(parents=True, exist_ok=True)
     with DESTINO_CSV.open("w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["tormenta", "anio", "danos_total_usd", "informe_tcr", "url_tcr", "nota"])
+        w.writerow(["tormenta", "anio", "danos_total_usd_nominal", "danos_total_usd",
+                    "factor_inflacion", "informe_tcr", "url_tcr", "nota"])
         for tor, v in VERIFICADOS.items():
             nombre = tor.capitalize()
-            w.writerow([nombre, v["anio"], v["total"], v["tcr"],
+            f = factor_inflacion(v["anio"])
+            w.writerow([nombre, v["anio"], v["total"], int(round(v["total"] * f)),
+                        f"{f:.6f}", v["tcr"],
                         f"https://www.nhc.noaa.gov/data/tcr/{v['tcr']}_{nombre}.pdf",
                         v["nota"]])
     print(f"escrito {DESTINO_CSV}")

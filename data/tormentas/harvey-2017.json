@@ -564,7 +564,7 @@
    "tocatierra": true,
    "ir": true,
    "muertes_acum": 3,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-26T06:00:00Z",
@@ -577,7 +577,7 @@
    "tocatierra": true,
    "ir": false,
    "muertes_acum": 3,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-26T12:00:00Z",
@@ -590,7 +590,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 3,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-26T18:00:00Z",
@@ -603,7 +603,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 3,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-27T00:00:00Z",
@@ -616,7 +616,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 18,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-27T06:00:00Z",
@@ -629,7 +629,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 18,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-27T12:00:00Z",
@@ -642,7 +642,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 18,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-27T18:00:00Z",
@@ -655,7 +655,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 18,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-28T00:00:00Z",
@@ -668,7 +668,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 27,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-28T06:00:00Z",
@@ -681,7 +681,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 27,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-28T12:00:00Z",
@@ -694,7 +694,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 27,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-28T18:00:00Z",
@@ -707,7 +707,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 27,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-29T00:00:00Z",
@@ -720,7 +720,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 60,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-29T06:00:00Z",
@@ -733,7 +733,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 60,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-29T12:00:00Z",
@@ -746,7 +746,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 60,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-29T18:00:00Z",
@@ -759,7 +759,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 60,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-30T00:00:00Z",
@@ -772,7 +772,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 60,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-30T06:00:00Z",
@@ -785,7 +785,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 60,
-   "danos_acum_usd": 98344757050
+   "danos_acum_usd": 125855370816
   },
   {
    "t": "2017-08-30T08:00:00Z",
@@ -798,7 +798,7 @@
    "tocatierra": true,
    "ir": false,
    "muertes_acum": 84,
-   "danos_acum_usd": 124996222178
+   "danos_acum_usd": 159962222336
   },
   {
    "t": "2017-08-30T12:00:00Z",
@@ -811,7 +811,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 84,
-   "danos_acum_usd": 124996222178
+   "danos_acum_usd": 159962222336
   },
   {
    "t": "2017-08-30T18:00:00Z",
@@ -824,7 +824,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 84,
-   "danos_acum_usd": 124996222178
+   "danos_acum_usd": 159962222336
   },
   {
    "t": "2017-08-31T00:00:00Z",
@@ -837,7 +837,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 124997984431
+   "danos_acum_usd": 159964477555
   },
   {
    "t": "2017-08-31T06:00:00Z",
@@ -850,7 +850,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 124997984431
+   "danos_acum_usd": 159964477555
   },
   {
    "t": "2017-08-31T12:00:00Z",
@@ -863,7 +863,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 124997984431
+   "danos_acum_usd": 159964477555
   },
   {
    "t": "2017-08-31T18:00:00Z",
@@ -876,7 +876,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 124997984431
+   "danos_acum_usd": 159964477555
   },
   {
    "t": "2017-09-01T00:00:00Z",
@@ -889,7 +889,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   },
   {
    "t": "2017-09-01T06:00:00Z",
@@ -902,7 +902,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   },
   {
    "t": "2017-09-01T12:00:00Z",
@@ -915,7 +915,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   },
   {
    "t": "2017-09-01T18:00:00Z",
@@ -928,7 +928,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 97,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   },
   {
    "t": "2017-09-02T00:00:00Z",
@@ -941,7 +941,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 103,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   },
   {
    "t": "2017-09-02T06:00:00Z",
@@ -954,7 +954,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 103,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   },
   {
    "t": "2017-09-02T12:00:00Z",
@@ -967,7 +967,7 @@
    "tocatierra": false,
    "ir": false,
    "muertes_acum": 103,
-   "danos_acum_usd": 125000000000
+   "danos_acum_usd": 159967056952
   }
  ]
 }
