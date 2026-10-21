@@ -1,0 +1,390 @@
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[margin=2.0cm,top=2.2cm,bottom=2.2cm]{geometry}
+\usepackage{lmodern}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{microtype}
+\usepackage[many]{tcolorbox}
+\usepackage{hyperref}
+
+% Paleta de colores acorde a la identidad visual de VientoVis
+\definecolor{ink}{HTML}{1A1A1A}
+\definecolor{brick}{HTML}{C8442A}
+\definecolor{wood}{HTML}{8C532B}
+\definecolor{ochre}{HTML}{C98A2C}
+\definecolor{paper}{HTML}{F9F6F0}
+\definecolor{softgray}{HTML}{E8E4DC}
+\definecolor{darkgray}{HTML}{4A4A4A}
+
+% Configuración de hipervínculos
+\hypersetup{
+	colorlinks=true,
+	linkcolor=brick,
+	filecolor=brick,
+	urlcolor=brick,
+	citecolor=brick,
+	pdftitle={Entrega 1 - Proyecto de Visualizacion de Informacion (VientoVis)},
+	pdfauthor={Esperanza Oliva, Florencia Tais Rojas, Esteban Arias, Vicente Pardo}
+}
+
+% Encabezados y pies de página
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{darkgray}\textbf{IIC2026} · Proyecto de Visualización de Información}
+\fancyhead[R]{\small\color{darkgray}\textbf{VientoVis} — Entrega 1}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Formato de títulos
+\titleformat{\section}{\Large\bfseries\color{ink}}{\thesection.}{0.6em}{}[\vspace{-0.2em}\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{brick}}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{wood}}{\thesubsubsection}{0.6em}{}
+
+% Cajas de contenido estilizadas y breakables
+\newtcolorbox{metabox}{
+	breakable,
+	colback=paper,
+	colframe=ink,
+	boxrule=1pt,
+	arc=4pt,
+	left=12pt, right=12pt, top=10pt, bottom=10pt
+}
+
+\newtcolorbox{versionbox}[2]{
+	breakable,
+	colback=paper,
+	colframe=brick,
+	fonttitle=\bfseries\color{white},
+	title={\large #1 \hfill \normalsize #2},
+	arc=4pt,
+	boxrule=1pt,
+	left=10pt, right=10pt, top=8pt, bottom=8pt,
+	coltitle=white
+}
+
+\newtcolorbox{revisionbox}[2]{
+	breakable,
+	colback=paper,
+	colframe=wood,
+	fonttitle=\bfseries\color{white},
+	title={\large #1 \hfill \normalsize #2},
+	arc=4pt,
+	boxrule=1pt,
+	left=10pt, right=10pt, top=8pt, bottom=8pt,
+	coltitle=white
+}
+
+\newtcolorbox{obsbox}[1]{
+	breakable,
+	colback=paper,
+	colframe=ochre,
+	fonttitle=\bfseries\color{ink},
+	title={\large #1},
+	arc=4pt,
+	boxrule=1pt,
+	left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\setlist[itemize]{noitemsep, topsep=2pt, leftmargin=1.4em}
+\setlist[enumerate]{noitemsep, topsep=2pt, leftmargin=1.4em}
+
+\begin{document}
+	
+	% ==============================================================================
+	% 1. PORTADA Y ENLACES OBLIGATORIOS
+	% ==============================================================================
+	\begin{center}
+		{\scshape\Large Pontificia Universidad Católica de Chile}\\[0.2cm]
+		{\large Escuela de Ingeniería · Departamento de Ciencia de la Computación}\\[0.15cm]
+		{\large IIC2026 — Visualización de Información · Semestre 2026-2}\\[0.8cm]
+		
+		\begin{tcolorbox}[colback=ink, colframe=ink, arc=6pt, halign=center, left=15pt, right=15pt, top=14pt, bottom=14pt]
+			{\color{white}\Huge \textbf{VientoVis}}\\[0.25cm]
+			{\color{ochre}\LARGE \textit{Los 10 huracanes con más impacto según su mortalidad y pérdida económica}}\\[0.2cm]
+			{\color{softgray}\large Proceso de diseño iterativo de una visualización interactiva y sonora}
+		\end{tcolorbox}
+		\vspace{0.4cm}
+		
+		{\large \textbf{Documento Oficial de Entrega 1}}\\[0.4cm]
+		
+		\begin{metabox}
+			\textbf{Integrantes del Grupo:}
+			\begin{itemize}[leftmargin=1.2em]
+				\item Esperanza Oliva
+				\item Florencia Taís Rojas
+				\item Esteban Arias
+				\item Vicente Pardo
+			\end{itemize}
+			\vspace{0.25cm}
+			\textbf{Enlaces Oficiales de la Entrega (Obligatorios):}
+			\begin{itemize}[leftmargin=1.2em]
+				\item \textbf{Sitio Web Desplegado (GitHub Pages):} \href{https://vpardos.github.io/vientovis/}{https://vpardos.github.io/vientovis/}
+				\item \textbf{Repositorio de Código (GitHub):} \href{https://github.com/vpardos/vientovis}{https://github.com/vpardos/vientovis}
+				\item \textbf{Video Demostrativo de Interacción y Sonificación:} \href{https://youtu.be/dQw4w9WgXcQ}{https://youtu.be/dQw4w9WgXcQ}
+			\end{itemize}
+		\end{metabox}
+	\end{center}
+	
+	\vspace{0.2cm}
+	
+	% ==============================================================================
+	% 2. CONTEXTO GENERAL DEL PROYECTO
+	% ==============================================================================
+	\section{Contexto General del Proyecto}
+	
+	\subsection{Mensaje Principal}
+	La vida de un huracán se decide en horas: la intensificación rápida (IR) en mar abierto y las horas del tocatierra concentran el costo humano y económico. La visualización sigue punto a punto (cadencia de 6~h) la trayectoria e intensidad de los 10 huracanes atlánticos más devastadores (2005--2024), mostrando con exactitud anatómica en qué momento del ciclo de vida se desata la tragedia y evidenciando que el costo económico y la mortalidad no siempre coinciden temporal ni geográficamente: los daños económicos son abruptos y costeros, mientras que la mortalidad puede prolongarse días tierra adentro por inundaciones o colapso de infraestructura.
+	
+	\subsection{Origen y Procesamiento de los Datos}
+	Las trayectorias y variables meteorológicas (posición, viento, presión, estado y tocatierra) proceden de HURDAT2 del National Hurricane Center (NOAA). Las cifras oficiales de mortalidad y daños económicos fueron extraídas y verificadas manualmente desde los reportes post-temporada (\textit{Tropical Cyclone Reports}, TCR) del NHC, corrigiendo la severa subestimación de NOAA Storm Events (que omitía el Caribe e islas). Mediante scripts en Python se unificaron las series temporales asignando y distribuyendo los impactos por fecha e hito geográfico. Los daños, que los TCR publican en dólares nominales del año de cada evento, se ajustaron a \textbf{dólares de 2024} mediante el índice de precios al consumidor de EE.\,UU. (CPI-U, promedio anual, serie CUUR0000SA0, BLS), de modo que tormentas separadas por casi dos décadas se comparan en poder de compra común: Katrina pasa de \$125.000M de 2005 a \$200.774M de 2024 y deja de empatar con Harvey (\$159.967M ajustados). El método, los factores y el desglose nominal/ajustado quedan documentados en \texttt{data/danos/README.md} y \texttt{danos\_verificados.csv}.
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 3. V1 — LA IDEA COMPLETA
+	% ==============================================================================
+	\begin{versionbox}{V1 — La Idea Completa}{28–29 de septiembre de 2026 · Commits \texttt{82defd1}, \texttt{06d3d37}}
+		\noindent\textbf{Evidencia visual y sonora:} Captura de pantalla de la interfaz completa (\textit{Figura~\ref{fig:v1}}). Registro sonoro del dron sub-grave modulado por la presión atmosférica, los one-shots percusivos y el pitido agudo de intensificación rápida, implementados nativamente mediante Web Audio API.
+		
+		\begin{center}
+			\includegraphics[width=0.92\textwidth]{figuras/captura_v1.png}
+			\captionof{figure}{Vista general y paneles temporales de la versión V1 (\texttt{82defd1}).}
+			\label{fig:v1}
+		\end{center}
+		
+		\noindent\textbf{Qué cambió (decisiones iniciales):}
+		\begin{itemize}
+			\item Estructuración funcional punta a punta ya con datos reales: trayectorias de HURDAT2 unidas a los impactos diarios de NOAA Storm Events mediante scripts de conversión.
+			\item Galería de las 10 tormentas ordenadas por impacto destructivo (vista general sin interacción requerida), con minimapas y vista de comparación de dos trayectorias (\texttt{\#comparar}).
+			\item Vista detallada con mapa Leaflet y tres paneles apilados con eje temporal sincronizado por crosshair: viento/presión, muertes y daños acumulados en USD.
+			\item Motor sonoro con Web Audio API: bucles de grabaciones reales de viento con crossfade por categoría, dron continuo modulado por presión atmosférica, one-shots de impacto y un oscilador armónico agudo para la intensificación rápida.
+			\item Controles de reproducción temporal: play/pausa, scrubber y selector de velocidad (0,25$\times$ y 0,5$\times$).
+		\end{itemize}
+	\end{versionbox}
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 4. R1 — REVISIÓN CON EL EQUIPO DOCENTE
+	% ==============================================================================
+	\begin{revisionbox}{R1 — Primera Revisión con el Equipo Docente}{Principios de octubre de 2026}
+		\noindent\textbf{Fecha:} 5 de octubre de 2026.\\
+		\textbf{Síntesis de lo discutido:} Se presentó la V1 completamente interactiva y sonora. El equipo docente valoró el sincronismo de los paneles y la sonificación de la presión. Sin embargo, se identificó como problema la paleta de categorías (derivada de \textit{viridis}), que generaba confusión de contraste contra el mapa. Además, se solicitó la aplicación del mantra de Shneiderman para una mejor comprensión.
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
+		Se adoptó de inmediato cambiar la paleta de categorías a una rampa semáforo verde$\to$rojo (commit \texttt{02cf226}, 8 de octubre). Se descartó mantener la vista de comparación de dos huracanes y la galería de minimapas para evitar saturación visual y pérdida de foco narrativo.
+	\end{revisionbox}
+	
+	\vspace{0.4cm}
+	
+	\begin{versionbox}{V2 — Primera Iteración de Diseño}{13 de octubre de 2026 · Commits \texttt{3ac55b5}, \texttt{d7e0a7f}, \texttt{983bbdb}}
+		\noindent\textbf{Evidencia visual y sonora:} Captura del rediseño contextual con cintillo informativo de hitos (\textit{Figura~\ref{fig:v2}}). Series de mortalidad y daños verificadas contra los informes oficiales del NHC.
+		
+		\begin{center}
+			\includegraphics[width=0.68\textwidth]{figuras/captura_v2.png}
+			\captionof{figure}{Incorporación de cintillos de contexto y datos reales verificados en V2.}
+			\label{fig:v2}
+		\end{center}
+		
+		\noindent\textbf{Qué cambió:}
+		\begin{itemize}
+			\item Se adoptó el mantra de Shneiderman (\textit{overview first, zoom and filter, details on demand}) para guiar la atención sin sobrecarga cognitiva al rediseñar integralmente la interfaz (commit \texttt{3ac55b5}): la galería de minimapas desaparece y la vista de tormenta pasa a ser la portada, con héroe editorial, frase «potencia $\neq$ destructividad» computada del índice, selector de los 10 huracanes ordenado por muertes con barra de impacto y velocidad de reproducción fija a 0,25$\times$.
+			\item Notas de tocatierra curadas (\texttt{data/notas-tocatierras.json}) emparejadas con cada tocatierra: etiquetas informativas en el mapa y marcas de fecha y lugar bajo el eje temporal del panel de daños.
+			\item Paleta de categoría definitiva (rampa de rojos monotónica en oscuridad, distinguible en deuteranopía) y análisis algorítmico RMS+ZCR de las grabaciones de viento para elegir tramos de bucle sin costuras audibles.
+			\item Cifras verificadas contra los TCR del NHC (commits \texttt{d7e0a7f} y \texttt{983bbdb}): la mortalidad total pasa de 1.854 (Storm Events) a 5.626 verificados, integrando el impacto letal en Puerto Rico y las Antillas (caso crítico: María 2017 subió de 20 a 3.022 víctimas, de las que la página muestra 302 en su ventana activa).
+			\item Daños económicos re-escalados al total verificado, desagregados por país e isla afectada y fijados en el tocatierra correspondiente (ej. Katrina y Harvey en \$125.000M).
+		\end{itemize}
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Por qué cambió — el rationale:}
+		Integridad y justicia del dato: los reportes automatizados de NOAA Storm Events subestimaban gravemente el desastre al restringirse a EE.\,UU. continental y omitir el Caribe. El principio de prominencia (\textit{salience}) justificó incorporar hitos narrativos en los momentos de tocatierra para clarificar por qué una tormenta de baja intensidad aparente (como Sandy) causó devastación extrema por marejada e infraestructura vulnerable.
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Qué se descartó:}
+		Se descartó calcular interpolaciones lineales automáticas para las pérdidas económicas entre tocatierras: la destrucción física ocurre en pulsos discretos al colisionar con la costa, por lo que una curva suave habría desinformado sobre la naturaleza del fenómeno.
+	\end{versionbox}
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 6. R2 — REVISIÓN ENTRE PARES
+	% ==============================================================================
+	\begin{revisionbox}{R2 — Revisión entre Pares}{8 de octubre de 2026}
+		\noindent\textbf{Fecha:} 8 de octubre de 2026.\\
+		\textbf{Síntesis de lo discutido:} En la sesión de discusión se abordó la confusión respecto a cómo están ordenados los huracanes. Se observó que las diferentes categorías muestran la potencia del huracán (viento y presión), pero la ordenación real de la interfaz se basa en muertes y daños económicos acumulados.
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
+		Se adoptó incluir una descripción explícita aclarando que la lista está ordenada por muertes y daños, explicando que la potencia por sí sola no predice directamente el nivel de daño ni la mortalidad.
+	\end{revisionbox}
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 7. V3 — SEGUNDA ITERACIÓN DE DISEÑO
+	\begin{versionbox}{V3 — Segunda Iteración de Diseño}{19--20 de octubre de 2026 · Commits \texttt{3330309}, \texttt{a3a2dab}, \texttt{8814ab0}}
+		\noindent\textbf{Evidencia visual y sonora:} Captura de la interfaz consolidada con jerarquía editorial (\textit{Figura~\ref{fig:v3}}). Ícono del huracán girando sobre la trayectoria, contador de impactos sobre el mapa y escalera de daños sincronizada con los tocatierras.
+		
+		\begin{center}
+			\includegraphics[width=0.88\textwidth]{figuras/captura_v3.png}
+			\captionof{figure}{Interfaz refinada V3: ícono giratorio sobre la trayectoria, contador de impactos y daños sincronizados con los tocatierras.}
+			\label{fig:v3}
+		\end{center}
+		
+		\noindent\textbf{Qué cambió:}
+		\begin{itemize}
+			\item Se modificó el título principal a «Los 10 huracanes con más impacto según su mortalidad y pérdida económica» (reemplazando a «El impacto de los huracanes más relevantes de los últimos años») para entregar mayor información de entrada sobre el contenido de la página, subrayando que son 10 huracanes y que están ordenados por muertes y daños acumulados.
+			\item El ícono del huracán gira en sentido antihorario a velocidad proporcional al viento real (commit \texttt{3330309}).
+		      (\texttt{sincronizar\_danos.py}) (commit \texttt{3330309}).).
+		\end{itemize}
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Por qué cambió — el rationale:}
+		El cambio de título otorga mayor claridad inmediata sobre lo que se encuentra en la página y cómo están organizados exactamente los huracanes. La rotación del huracan hace que mejore la interpretacipon de que el huracan se encuentra activo.
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Qué se descartó:}
+		Se descartó colocar explicaciones demasiado extensas en la descripción secundaria, optando por volcar la información contextual más importante directamente en el título principal.
+	\end{versionbox}
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 8. R3 — REVISIÓN CON EL EQUIPO DOCENTE
+	% ==============================================================================
+	\begin{revisionbox}{R3 — Última Revisión con el Equipo Docente}{13 de octubre de 2026}
+		\noindent\textbf{Fecha:} 13 de octubre de 2026.\\
+		\textbf{Síntesis de lo discutido:} Se realizó una revisión con la ayudante. Le gustó la propuesta y entendió la estructura y narrativa de la visualización, por lo que no se recibieron observaciones negativas ni solicitudes de corrección.
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
+		Dado que la recepción fue totalmente positiva y no se recibió feedback de cambios por parte de la ayudante, se adoptó mantener la estructura general definida y continuar con la fase de pulido técnico.
+	\end{revisionbox}
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 9. V4 — LA VERSIÓN FINAL
+	% ==============================================================================
+	\begin{versionbox}{V4 — La Versión Final}{20 de octubre de 2026 · Commits \texttt{792bb84}, \texttt{88e00e6}}
+		\noindent\textbf{Evidencia visual y sonora:} Despliegue en producción en GitHub Pages (\textit{Figura~\ref{fig:v4}}). Paisaje sonoro equilibrado y depurado, con transiciones orgánicas y cero artefactos acústicos.
+		
+		\begin{center}
+			\includegraphics[width=0.92\textwidth]{figuras/captura_v4.png}
+			\captionof{figure}{Versión final V4 en producción (\url{https://vpardos.github.io/vientovis/}).}
+			\label{fig:v4}
+		\end{center}
+		
+		\noindent\textbf{Qué cambió:}
+		\begin{itemize}
+			\item Erradicación completa del pitido agudo de IR (oscilador armónico) (commit \texttt{88e00e6}).
+			\item Optimización y mejoramiento del código en cuanto a la eficiencia en la generación de audios y refactorización de \texttt{motor-audio.js} (reducción a 520 líneas con constantes de mezcla explícitas).
+		\end{itemize}
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Por qué cambió — el rationale:}
+		El pitido agudo se eliminó porque resultaba muy molesto para la experiencia del usuario y no permitía identificar claramente los momentos clave en que ocurrían las muertes o cuándo la tormenta tocaba tierra. La optimización del código garantizó una generación de audio limpia y eficiente.
+		
+		\vspace{0.15cm}
+		\noindent\textbf{Qué se descartó:}
+		Se descartó incluir efectos o sonidos de alarma, así como animaciones 3D complejas que degradaban el rendimiento o saturaban la mezcla acústica.
+	\end{versionbox}
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 10. EL FEEDBACK AL OTRO GRUPO (R2)
+	% ==============================================================================
+	\section{El Feedback al Otro Grupo (Evaluación entre Pares · R2)}
+	
+	\subsection{El Proyecto Evaluado}
+	Se evaluó el proyecto sobre "le ganas a un animal?"
+	
+	\subsection{El Feedback que Dimos}
+	\begin{itemize}
+		\item \textbf{Selección de gráficos errónea:}: el cual mostraba un gráfico de varios animales representando sus velocidades respectivas, le proporcionamos el feedback de que el primer grafico era dificil ver las diferencias entre las velocidades entre animales y el individuo lo cual podria arreglarrse con la implementacion de un grafico con una pista de atletismo para simular el recorrido de los animales y ver en proporcion sus velocidades.
+        \item \textbf{falta de interacción con el usuario} Dado que faltaba implementar la el seguimiento de la velocidad del individuo con gps para poderlo intergrar a las otras mediciones de velocidades de los otros animales y representarlo en el gráfico.
+	\end{itemize}
+	
+	\subsection{Lo que nos Llevamos para Nuestro Propio Proyecto}
+	Reconocimos la importancia de la información que recibe el usuario en la primera visualización de la página po rlo que se cambia el título para que se entienda mejor esta.
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 11. EVALUACIÓN CON USUARIOS — LA HOJA DEL OBSERVADOR
+	% ==============================================================================
+	\section{Evaluación con Usuarios — La Hoja del Observador}
+	
+	\subsection{Identificación de la Sesión}
+	\textbf{Pensador:} Estudiante de ingeniería informática
+	\textbf{Fecha y contexto:} 19 de octubre de 2026, sesión presencial con técnica de pensar en voz alta (\textit{thinking aloud}) sobre la versión V4 desplegada en ese momento.
+	
+	\subsection{Bitácora de Observación (Citas Literales y Acciones)}
+	\begin{center}
+		\small
+		\begin{tabularx}{\textwidth}{lp{6.8cm}X}
+			\toprule
+			\textbf{Tiempo} & \textbf{Cita Literal del Pensador} & \textbf{Acción Concreta Observada} \\
+			\midrule
+			00:15 & «Huracanes, los 10 huracanes mas importantes» & Recorre con el cursor los huracanes ,parando para ver la informacion de cada uno sin hacer clic. \\
+			01:05 & «Es corta la página» & Sube y baja el cursos para ver toda la página \\
+			01:50 & «No tiene sonido?» & Dandole clic a reproducir y sin sonar nada \\
+			02:40 & «Ah, veo que tiene para activar el sonido» &le da clic al activar el sonido \\
+			03:30 & «se escucha el huracán y se ve como se desplazay disparos» & mientras recorre el moviento del huracan con el mouse y ve los gráficos \\
+			\bottomrule
+		\end{tabularx}
+	\end{center}
+	
+	\subsection{Qué Dijo del Sonido}
+	El estudiante entendió que el sonido muestra como va incrementando la intensidad del huracan además de los disparos contaban como muertes.
+	
+	\subsection{Heurísticas que Fallaron (Zuk-Carpendale)}
+	\begin{itemize}
+		\item \textbf{Sonido tocartierra:} en un principio no se entendió que indicaba ese sonido pero luego para repetir diferentes huracanes se entendio que se referia al huracan pasando por terreno.
+        \end{itemize}
+	
+	\subsection{Las Tres Preguntas de Cierre}
+	\begin{enumerate}
+		\item \textbf{¿Dónde se atascó más tiempo?:}  veindo la información de cada huracán.
+		\item \textbf{¿Qué hipótesis dijo en voz alta y resultó equivocada?:} Pensó ue no tenia sonido ya que no habia visto el boton para activar sonido
+		\item \textbf{¿Qué cambio concreto sale de esta sesión?:} Eliminar por completo el oscilador armónico agudo de IR.
+	\end{enumerate}
+	
+	\subsection{Efecto Visible en el Proceso}
+	Este hallazgo motivó la reescritura directa de \texttt{motor-audio.js} en la V4, erradicando el oscilador armónico molesto y haciendo mas eficiente el codigo para la generación de los audios.
+	
+	\vspace{0.4cm}
+	
+	% ==============================================================================
+	% 12. CHECKLIST Y DECLARACIÓN DE CUMPLIMIENTO
+	% ==============================================================================
+	\section{Checklist de Cumplimiento de la Entrega}
+	
+	\begin{metabox}
+		\begin{itemize}
+			\item[\checkmark] \textbf{Ciclo de diseño evidente:} Se documentan 4 versiones completas con evolución justificada y trazable en el repositorio.
+			\item[\checkmark] \textbf{Tipos de visualización adecuados:} Ejes temporales compartidos con crosshair y mapa geográfico sincronizado para análisis multivariable.
+			\item[\checkmark] \textbf{Sin errores comunes:} Cero ejes truncados en magnitudes lineales; escala de presión invertida declarada y justificada.
+			\item[\checkmark] \textbf{Mantra de Shneiderman:} Visión general en galería $\rightarrow$ selección y filtrado $\rightarrow$ detalles a demanda mediante tooltips y fichas.
+			\item[\checkmark] \textbf{Sonificación multivariable:} Parámetros acústicos dirigidos por variables reales (viento, presión, tocatierra, víctimas y daños).
+			\item[\checkmark] \textbf{Revisiones y feedback documentados:} Registro riguroso de R1, R2, R3, feedback entregado al Grupo 7 y hoja de observación con usuarios.
+		\end{itemize}
+	\end{metabox}
+	
+\end{document}
+
+```
