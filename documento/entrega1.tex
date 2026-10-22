@@ -1,4 +1,3 @@
-
 \documentclass[11pt,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
@@ -259,7 +258,7 @@
 		
 		\vspace{0.15cm}
 		\noindent\textbf{Por qué cambió — el rationale:}
-		El cambio de título otorga mayor claridad inmediata sobre lo que se encuentra en la página y cómo están organizados exactamente los huracanes. La rotación del glifo codifica el viento real por un canal preatentivo y refuerza la lectura de intensidad. La sincronización de los daños con el tocatierra hace inmediata la alineación temporal entre fenómeno y consecuencia.
+		El cambio de título otorga mayor claridad inmediata sobre lo que se encuentra en la página y cómo están organizados exactamente los huracanes. La rotación del huracán hace que mejore la interpretación de que el huracán se encuentra activo.
 		
 		\vspace{0.15cm}
 		\noindent\textbf{Qué se descartó:}
@@ -273,7 +272,7 @@
 	% ==============================================================================
 	\begin{revisionbox}{R3 — Última Revisión con el Equipo Docente}{13 de octubre de 2026}
 		\noindent\textbf{Fecha:} 13 de octubre de 2026.\\
-		\textbf{Síntesis de lo discutido:} Se realizó una revisión con la ayudante. Le gustó la propuesta y entendió perfectamente la estructura y narrativa de la visualización, por lo que no se recibieron observaciones negativas ni solicitudes de corrección.
+		\textbf{Síntesis de lo discutido:} Se realizó una revisión con la ayudante. Le gustó la propuesta y entendió la estructura y narrativa de la visualización, por lo que no se recibieron observaciones negativas ni solicitudes de corrección.
 		
 		\vspace{0.15cm}
 		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
@@ -296,10 +295,8 @@
 		
 		\noindent\textbf{Qué cambió:}
 		\begin{itemize}
-			\item Erradicación completa del pitido agudo de IR (oscilador armónico); el dron sub-grave y el viento real dominan con nitidez el espectro (commit \texttt{88e00e6}).
+			\item Erradicación completa del pitido agudo de IR (oscilador armónico) (commit \texttt{88e00e6}).
 			\item Optimización y mejoramiento del código en cuanto a la eficiencia en la generación de audios y reestructuración de \texttt{motor-audio.js} (reducción a 520 líneas con constantes de mezcla explícitas).
-			\item Pulido de \textit{bugs} latentes (commit \texttt{792bb84}): \textit{escape} seguro de HTML, cancelación de temporizadores y derivados computados una sola vez.
-			\item Calibración final de balance dinámico de audio.
 		\end{itemize}
 		
 		\vspace{0.15cm}
@@ -319,17 +316,16 @@
 	\section{El Feedback al Otro Grupo (Evaluación entre Pares · R2)}
 	
 	\subsection{El Proyecto Evaluado}
-	Se evaluó el proyecto del Grupo 7, enfocado en visualizar la evolución de la red del Metro de Santiago y sus tiempos de desplazamiento entre comunas. La interfaz presentaba un mapa interactivo con isócronas de viaje y un gráfico de barras comparativo de afluencia por estación en horario punta.
+	Se evaluó el proyecto «¿Le ganas a un animal?».
 	
 	\subsection{El Feedback que Dimos}
 	\begin{itemize}
-		\item \textbf{Eje truncado en gráfico de afluencia:} Se observó que el eje de ordenadas comenzaba en 15.000 pasajeros en lugar de cero, exagerando visualmente diferencias mínimas entre estaciones centrales y violando el principio de proporcionalidad visual de Tufte.
-		\item \textbf{Codificación de color errónea:} Utilizaban una rampa secuencial monocromática para representar líneas independientes del metro, lo que inducía una falsa jerarquía numérica; se recomendó usar paleta categórica de alto contraste.
-		\item \textbf{Sonificación unidimensional:} El sonido se limitaba a modular el volumen con el número de pasajeros; se propuso codificar la congestión mediante cambios en el tempo rítmico y tono para una metáfora acústica más natural.
+		\item \textbf{Selección de gráficos errónea:} el proyecto mostraba un gráfico de varios animales representando sus velocidades respectivas; le proporcionamos el feedback de que en el primer gráfico era difícil ver las diferencias de velocidad entre los animales y el individuo, lo cual podría arreglarse con la implementación de un gráfico con una pista de atletismo para simular el recorrido de los animales y ver en proporción sus velocidades.
+		\item \textbf{Falta de interacción con el usuario:} faltaba implementar el seguimiento de la velocidad del individuo con GPS para poder integrarlo a las otras mediciones de velocidad de los otros animales y representarlo en el gráfico.
 	\end{itemize}
 	
 	\subsection{Lo que nos Llevamos para Nuestro Propio Proyecto}
-	Reconocimos la importancia de explicitar inequívocamente las unidades de medida en cada tooltip y eje (kt, mb, USD, UTC). Comprobamos que en VientoVis algunas etiquetas de daños no aclaraban explícitamente si correspondían a miles de millones, lo que corregimos de inmediato.
+	Reconocimos la importancia de la información que recibe el usuario en la primera visualización de la página, por lo que se cambia el título para que se entienda mejor.
 	
 	\vspace{0.4cm}
 	
@@ -339,8 +335,8 @@
 	\section{Evaluación con Usuarios — La Hoja del Observador}
 	
 	\subsection{Identificación de la Sesión}
-	\textbf{Pensador:} Estudiante universitario ajeno al área de computación y meteorología (sin conocimiento previo del proyecto).\\
-	\textbf{Fecha y contexto:} 18 de octubre de 2026, sesión presencial con técnica de pensar en voz alta (\textit{thinking aloud}) sobre la versión V2 desplegada en ese momento.
+	\textbf{Pensador:} Estudiante de ingeniería informática\\
+	\textbf{Fecha y contexto:} 19 de octubre de 2026, sesión presencial con técnica de pensar en voz alta (\textit{thinking aloud}) sobre la versión V3 desplegada en ese momento.
 	
 	\subsection{Bitácora de Observación (Citas Literales y Acciones)}
 	\begin{center}
@@ -349,33 +345,32 @@
 			\toprule
 			\textbf{Tiempo} & \textbf{Cita Literal del Pensador} & \textbf{Acción Concreta Observada} \\
 			\midrule
-			00:15 & «Veo fichas de huracanes ordenadas... Katrina y María están arriba con números gigantes.» & Recorre con el cursor la galería general sin hacer clic. \\
-			01:05 & «Al ponerle play el círculo avanza en el mar y el sonido empieza a rugir más fuerte.» & Hace clic en Katrina, activa el audio y pulsa Play. \\
-			01:50 & «¡Pum! Sonó un golpe seco cuando chocó la costa y la curva roja se disparó de golpe.» & Observa fijamente la línea de daños en el panel inferior. \\
-			02:40 & «En María el viento suena aterrador, pero hay un pitido agudo de fondo que me desconcentra.» & Cambia a María, arrastra el scrubber hacia atrás. \\
-			03:30 & «¿Las muertes son en el mismo momento que se cae la casa o cuentan las inundaciones de después?» & Pasa el cursor por el tooltip del punto de Puerto Rico. \\
+			00:15 & «Huracanes, los 10 huracanes más importantes» & Recorre con el cursor los huracanes, parando para ver la información de cada uno sin hacer clic. \\
+			01:05 & «Es corta la página» & Sube y baja el cursor para ver toda la página. \\
+			01:50 & «¿No tiene sonido?» & Dándole clic a reproducir y sin sonar nada. \\
+			02:40 & «Ah, veo que tiene para activar el sonido» & Le da clic al activar el sonido. \\
+			03:30 & «se escucha el huracán y se ve cómo se desplaza y disparos» & Mientras recorre el movimiento del huracán con el mouse y ve los gráficos. \\
 			\bottomrule
 		\end{tabularx}
 	\end{center}
 	
 	\subsection{Qué Dijo del Sonido}
-	El pensador afirmó que el rugido del viento le permitía anticipar la peligrosidad de la tormenta sin necesidad de fijar la vista en las cifras de nudos. Manifestó que el golpe de tocatierra le producía un sobresalto coherente con el impacto costero. Sin embargo, criticó tajantemente el silbido de alta frecuencia en intensificación rápida, describiéndolo como molesto y artificial.
+	El estudiante entendió que el sonido muestra cómo va incrementando la intensidad del huracán, además de que los disparos contaban como muertes.
 	
 	\subsection{Heurísticas que Fallaron (Zuk-Carpendale)}
 	\begin{itemize}
-		\item \textbf{El sonido no se entiende sin explicación previa:} El armónico agudo de IR se percibió como un pitido irritante o interferencia de audio en lugar de una alerta deliberada de intensificación meteorológica.
-		\item \textbf{Falta de contexto en la métrica:} Inicialmente dudó sobre si la mortalidad correspondía a muertes directas o indirectas, requiriendo mayor claridad en las notas metodológicas.
+		\item \textbf{Sonido de tocatierra:} en un principio no se entendió qué indicaba ese sonido pero luego para repetir diferentes huracanes se entendió que se refería al huracán pasando por terreno.
 	\end{itemize}
 	
 	\subsection{Las Tres Preguntas de Cierre}
 	\begin{enumerate}
-		\item \textbf{¿Dónde se atascó más tiempo?:} Intentando descifrar el motivo del zumbido agudo en la reproducción de María y Harvey.
-		\item \textbf{¿Qué hipótesis dijo en voz alta y resultó equivocada?:} Asumió que el momento de mayor viento siempre coincidía con el momento de más muertes, sorprendiéndose al ver que en tormentas de lluvia masiva las muertes ocurren días después.
-		\item \textbf{¿Qué cambio concreto sale de esta sesión?:} Eliminar por completo el oscilador armónico agudo de IR en el motor sonoro e incorporar notas contextuales claras en las fichas sobre muertes directas e indirectas.
+		\item \textbf{¿Dónde se atascó más tiempo?:} Viendo la información de cada huracán.
+		\item \textbf{¿Qué hipótesis dijo en voz alta y resultó equivocada?:} Pensó que no tenía sonido, ya que no había visto el botón para activar el sonido.
+		\item \textbf{¿Qué cambio concreto sale de esta sesión?:} Eliminar por completo el oscilador armónico agudo de IR.
 	\end{enumerate}
 	
 	\subsection{Efecto Visible en el Proceso}
-	Este hallazgo motivó la reescritura directa de \texttt{motor-audio.js} en la V4, erradicando el oscilador armónico molesto y consolidando una atmósfera sonora centrada en el viento real.
+	Este hallazgo motivó la reescritura directa de \texttt{motor-audio.js} en la V4, erradicando el oscilador armónico molesto y haciendo más eficiente el código para la generación de los audios.
 	
 	\vspace{0.4cm}
 	
@@ -391,7 +386,7 @@
 			\item[\checkmark] \textbf{Sin errores comunes:} Cero ejes truncados en magnitudes lineales; escala de presión invertida declarada y justificada.
 			\item[\checkmark] \textbf{Mantra de Shneiderman:} Visión general en galería $\rightarrow$ selección y filtrado $\rightarrow$ detalles a demanda mediante tooltips y fichas.
 			\item[\checkmark] \textbf{Sonificación multivariable:} Parámetros acústicos dirigidos por variables reales (viento, presión, tocatierra, víctimas y daños).
-			\item[\checkmark] \textbf{Revisiones y feedback documentados:} Registro riguroso de R1, R2, R3, feedback entregado al Grupo 7 y hoja de observación con usuarios.
+			\item[\checkmark] \textbf{Revisiones y feedback documentados:} Registro riguroso de R1, R2, R3, feedback entregado al otro grupo y hoja de observación con usuarios.
 		\end{itemize}
 	\end{metabox}
 	
