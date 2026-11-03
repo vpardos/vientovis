@@ -110,6 +110,11 @@ const App = {
     this._estado = null;
     if (this._mapa) { this._mapa.destruir(); this._mapa = null; }
     this._paneles = null;
+    /* sin tormenta montada no hay viento que soplar: el ventilador vuelve a 0
+     * (la conexión USB sigue abierta para cuando se remonte la vista) */
+    if (typeof Ventilador !== 'undefined') {
+      try { Ventilador.reposo(); } catch (err) { /* noop */ }
+    }
     this._refs = null; // sin refs huérfanas: ningún pintor escribe en DOM desmontado
     const tip = document.getElementById('tooltip');
     if (tip) tip.classList.add('oculto');
@@ -313,7 +318,11 @@ const App = {
       '<div class="audio-extra oculto" id="audio-extra">' +
       '<button type="button" id="btn-mudo" class="btn" aria-pressed="false">Silenciar</button>' +
       '<input type="range" id="volumen" class="volumen" min="0" max="1" step="0.01" value="0.7" aria-label="Volumen del sonido">' +
-      '</div></div>' +
+      '</div>' +
+      /* ventilador físico: mismo vidrio y misma tipografía que los demás
+       * controles de salida; el módulo pinta su estado (js/ventilador.js) */
+      '<button type="button" id="btn-ventilador" class="btn" aria-pressed="false">Conectar a Ventilador</button>' +
+      '</div>' +
       '<p class="rep-valores" id="rep-valores" aria-live="off"></p>' +
       '</div>' +
       '<div class="tormenta-cuerpo">' +
@@ -445,6 +454,9 @@ const App = {
     /* --- audio --- */
     this._cablearAudio();
 
+    /* --- ventilador físico (Web Serial, opcional) --- */
+    this._cablearVentilador();
+
     /* --- estado inicial --- */
     this._setActivo(0);
   },
@@ -516,6 +528,40 @@ const App = {
         this._conAudio('setVolumen', this._volumen);
       });
     }
+  },
+
+  /* --- cablear el botón del ventilador (defensivo, igual que el audio) ---
+   * El módulo es opcional: sin js/ventilador.js la página funciona igual y el
+   * botón queda deshabilitado explicando el motivo. Web Serial no existe en
+   * Firefox, Safari ni iOS: ahí el botón se muestra apagado, nunca roto. */
+  _cablearVentilador() {
+    const btn = document.getElementById('btn-ventilador');
+    if (!btn) return;
+    if (typeof Ventilador === 'undefined') {
+      btn.disabled = true;
+      btn.textContent = 'Ventilador no disponible';
+      btn.title = 'js/ventilador.js no se cargó';
+      return;
+    }
+    Ventilador.enlazarBoton(btn); // el estado real vive en el módulo y sobrevive al re-montaje
+    if (!Ventilador.soportado) {
+      btn.disabled = true;
+      btn.textContent = 'Ventilador no disponible';
+      btn.title = 'Este navegador no tiene Web Serial: usa Chrome o Edge de escritorio sobre https.';
+      return;
+    }
+    btn.disabled = false;
+    btn.addEventListener('click', () => {
+      btn.disabled = true; // evita doble clic mientras el diálogo del puerto está abierto
+      Promise.resolve(Ventilador.alternar()).finally(() => { btn.disabled = false; });
+    });
+  },
+
+  /* --- puente con el ventilador: nunca lanza (como _conAudio) --- */
+  _alVentilador(kt) {
+    if (typeof Ventilador === 'undefined') return;
+    try { Ventilador.seguir(kt); }
+    catch (err) { console.warn('[vientovis] ventilador omitido:', err); }
   },
 
   /* --- playback --- */
@@ -660,6 +706,10 @@ const App = {
     this._pintarRelojMapa(i);
     this._pintarVientoMapa(i);
     this._pintarTicker(i);
+    /* el ventilador sopla lo que la página está mostrando: mismo punto activo
+     * que contador/reloj/viento, sin vía paralela que pueda desincronizarse */
+    const p = this._estado && this._estado.puntos[i];
+    if (p) this._alVentilador(p.viento_kt);
   },
 
   /* Fecha/hora UTC del punto activo en el overlay superior izquierdo del mapa
@@ -925,6 +975,13 @@ const App = {
     const tInterp = q ? +p.d + (+q.d - +p.d) * frac : +s.puntos[s.puntos.length - 1].d;
     if (this._refs && this._refs.relojMapa) this._refs.relojMapa.textContent = Datos.fmtReloj(new Date(tInterp));
     this._pintarVientoMapa(i); // mismo punto que la línea de valores (sin interpolar)
+    /* el ventilador SÍ interpola: entre dos puntos de 6 h el viento sube o baja
+     * de forma continua, y el ventilador debe acompañar esa rampa en vez de
+     * saltar de escalón en escalón */
+    if (p) {
+      const kt = q ? (+p.viento_kt + (+q.viento_kt - +p.viento_kt) * frac) : +p.viento_kt;
+      this._alVentilador(kt);
+    }
   },
 
   _setHover(i, ev) {

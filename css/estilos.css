@@ -1504,6 +1504,29 @@ input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2
   .ticker-punto, .ticker-texto.entra { animation: none; }
 }
 
+/* ------------ ventilador físico (Web Serial) ------------ */
+
+/* El botón vive dentro de .audio-grupo, así que no toca la grilla del
+ * reproductor ni su orden (play · scrub · valores · audio). En pantallas
+ * angostas el grupo puede envolver en dos líneas en vez de desbordar la
+ * barra; si cabe en una sola línea, nada cambia. */
+.audio-grupo { flex-wrap: wrap; }
+
+.reproductor #btn-ventilador { font-size: 12.5px; padding: 7px 11px; }
+
+/* conectado: el acento verde agua del chrome, sin pulso (no compite con el
+ * CTA de sonido) y con el duty en vivo dentro del propio botón */
+.reproductor #btn-ventilador.conectado {
+  color: var(--acento-2);
+  border-color: var(--acento);
+  background: rgba(46, 163, 139, 0.14);
+}
+
+.reproductor #btn-ventilador.conectado:hover:not(:disabled) {
+  background: rgba(46, 163, 139, 0.24);
+  border-color: var(--acento-2);
+}
+
 /* ------------ responsive ------------ */
 
 /* ---------- escritorio: reproductor en una sola fila ---------- */
