@@ -25,7 +25,9 @@ const Ventilador = {
   DUTY_MIN: 28,
 
   /* Curva viento (kt) → duty (0-100). Umbrales Saffir–Simpson: TD, TS, y
-   * Cat 1-5 en 64 / 83 / 96 / 113 / 137 kt. El último tramo (137+) satura. */
+   * Cat 1-5 en 64 / 83 / 96 / 113 / 137 kt. Sobre el umbral de Cat 5 la curva
+   * sigue subiendo hasta 155 kt (el pico de la serie, Irma) para que Cat 4 y
+   * Cat 5 no se aplasten contra el 100 %: solo el techo real lo alcanza. */
   CURVA: [
     [0, 0],
     [15, 28],   // mínimo de la serie (TD en formación): ya por encima del arranque
@@ -33,8 +35,9 @@ const Ventilador = {
     [64, 52],   // huracán Cat 1
     [83, 65],   // Cat 2
     [96, 76],   // Cat 3
-    [113, 88],  // Cat 4
-    [137, 100]  // Cat 5 (y por encima)
+    [113, 84],  // Cat 4
+    [137, 93],  // Cat 5 (umbral)
+    [155, 100]  // pico de la serie (Irma 2017): saturación
   ],
 
   /* rampa: unidades de duty por tick de 40 ms (≈ 62 %/s: barrido completo en
