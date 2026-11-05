@@ -2,8 +2,11 @@
 /* ventilador.js — sincronización de un ventilador físico con el viento del
  * punto activo, por Web Serial (objeto global `Ventilador`).
  *
- * Protocolo: el Arduino recibe líneas «F<0-100>\n» a 9600 bauds (sketch
- * codigoarduino.txt); el servo «S<0-180>\n» existe pero aquí NO se toca.
+ * Protocolo: el Arduino recibe líneas «F<0-100>\n» (duty del ventilador) y
+ * «S<0-180>\n» (ángulo del servo) a 9600 bauds — el sketch codigoarduino.txt.
+ * El servo es un MG90S: la categoría Saffir–Simpson del punto activo manda el
+ * ángulo (ANGULOS_CAT), sin interpolar, porque la categoría tampoco se
+ * interpola en la visualización.
  *
  * DISEÑO DE LA CURVA: el duty no es lineal en el viento. Un ventilador de 12 V
  * no arranca bajo ~30 % de duty (se queda parado y zumba), y con una recta
@@ -40,6 +43,20 @@ const Ventilador = {
     [155, 100]  // pico de la serie (Irma 2017): saturación
   ],
 
+  /* Ángulo del servo (grados) por categoría Saffir–Simpson: índice = cat_ss
+   * (0 = depresión/tormenta tropical … 5 = Cat 5). Cuatro posiciones para seis
+   * categorías: se agrupan por severidad de forma simétrica, 1 · 2 · 2 · 1, y
+   * Cat 4 y Cat 5 quedan en posiciones distintas —igual que en la curva del
+   * ventilador— para que el tope de la escala se vea en el eje físico. */
+  ANGULOS_CAT: [
+    30,  // TD / tormenta tropical
+    45,  // Cat 1
+    45,  // Cat 2
+    60,  // Cat 3
+    60,  // Cat 4
+    75   // Cat 5
+  ],
+
   /* rampa: unidades de duty por tick de 40 ms (≈ 62 %/s: barrido completo en
    * 1,6 s, la inercia de un ventilador real) */
   PASO_MAX: 2.5,
@@ -57,7 +74,9 @@ const Ventilador = {
   _codificador: new TextEncoder(),
   _objetivo: 0,   // duty que pide la app (viento del punto activo)
   _actual: 0,     // duty que se está enviando (rampa)
-  _enviado: null, // último valor escrito en el puerto
+  _enviado: null, // último duty escrito en el puerto
+  _objetivoAngulo: 30, // ángulo que pide la app (categoría del punto activo)
+  _anguloEnviado: null, // último ángulo escrito en el puerto
   _temporizador: null,
   _escribiendo: false,
   _ultimoEnvio: 0,
@@ -82,6 +101,13 @@ const Ventilador = {
     return c[c.length - 1][1];
   },
 
+  /* ===================== mapeo categoría → ángulo ===================== */
+
+  anguloCategoria(cat) {
+    const c = Math.max(0, Math.min(5, cat | 0));
+    return this.ANGULOS_CAT[c];
+  },
+
   /* ===================== API que usa app.js ===================== */
 
   /* El botón se re-crea en cada montaje de la vista tormenta: se re-apunta
@@ -91,9 +117,13 @@ const Ventilador = {
     this._pintarEstado();
   },
 
-  /* Fija el objetivo a partir del viento del punto activo, en nudos. */
-  seguir(kt) {
+  /* Fija los objetivos desde el punto activo: viento en nudos (ventilador) y,
+   * cuando llega, categoría (servo). La categoría es DISCRETA —no se
+   * interpola, igual que en la visualización—: el playback llama a este método
+   * con `cat` en cada cambio de punto y sin `cat` en los frames intermedios. */
+  seguir(kt, cat) {
     this._objetivo = this.dutyViento(kt);
+    if (cat !== undefined && cat !== null) this._objetivoAngulo = this.anguloCategoria(cat);
     if (this.conectado && !this._temporizador) this._arrancarBucle();
   },
 
@@ -130,6 +160,7 @@ const Ventilador = {
       this.conectado = true;
       this._escribiendo = false;
       this._enviado = null;
+      this._anguloEnviado = null; // el primer tick manda la categoría vigente al servo
       this._ultimoEnvio = 0;
       this._actual = 0;                    // arranca en frío y sube por la rampa
       this._oyentesDesconexion();
@@ -159,6 +190,7 @@ const Ventilador = {
     this._escritor = null;
     this.puerto = null;
     this._enviado = null;
+    this._anguloEnviado = null; // al reconectar se reenvía la categoría vigente
     this._objetivo = 0;
     this._actual = 0;
     /* estado seguro ANTES de soltar: el ventilador no debe quedarse girando
@@ -199,19 +231,30 @@ const Ventilador = {
     if (Math.abs(dif) <= this.PASO_MAX) this._actual = this._objetivo;
     else this._actual += Math.sign(dif) * this.PASO_MAX;
 
-    const v = Math.round(this._actual);
-    if (v === this._enviado) return;
+    if (this._escribiendo) return; // el puerto está ocupado: se reintenta al próximo tick
     const ahora = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     if (ahora - this._ultimoEnvio < this.MS_ENTRE_ENVIOS) return;
-    this._enviar(v, ahora);
+
+    /* El servo manda: un cambio de categoría es un EVENTO, no una rampa, y se
+     * envía antes que el siguiente paso del ventilador. El servo se mueve solo
+     * (≈ 0,1 s por 60° en un MG90S), así que aquí no hay interpolación. */
+    if (this._objetivoAngulo !== this._anguloEnviado) {
+      this._anguloEnviado = this._objetivoAngulo;
+      this._escribir('S' + this._objetivoAngulo, ahora);
+      return;
+    }
+
+    const v = Math.round(this._actual);
+    if (v === this._enviado) return;
+    this._enviado = v;
+    this._escribir('F' + v, ahora);
   },
 
-  _enviar(v, ahora) {
-    if (!this._escritor || this._escribiendo) return;
+  _escribir(linea, ahora) {
+    if (!this._escritor) return;
     this._escribiendo = true;
-    this._enviado = v;
     this._ultimoEnvio = ahora;
-    this._escritor.write(this._codificador.encode('F' + v + '\n'))
+    this._escritor.write(this._codificador.encode(linea + '\n'))
       .then(() => { this._escribiendo = false; this._pintarEstado(); })
       .catch(err => {
         this._escribiendo = false;
@@ -229,8 +272,9 @@ const Ventilador = {
     btn.classList.toggle('conectado', this.conectado);
     btn.setAttribute('aria-pressed', String(this.conectado));
     if (this.conectado) {
-      btn.textContent = 'Ventilador · ' + Math.round(this._actual) + ' %';
-      btn.title = 'Conectado por USB. Sigue el viento del punto activo. Clic para desconectar.';
+      const ang = this._anguloEnviado != null ? this._anguloEnviado : this._objetivoAngulo;
+      btn.textContent = 'Ventilador · ' + Math.round(this._actual) + ' % · ' + ang + '°';
+      btn.title = 'Conectado por USB: el ventilador sigue el viento del punto activo y el servo su categoría. Clic para desconectar.';
     } else {
       btn.textContent = 'Conectar a Ventilador';
       btn.title = 'Sincroniza el viento del punto activo con un ventilador por USB (Web Serial).';

@@ -557,10 +557,12 @@ const App = {
     });
   },
 
-  /* --- puente con el ventilador: nunca lanza (como _conAudio) --- */
-  _alVentilador(kt) {
+  /* --- puente con el ventilador: nunca lanza (como _conAudio) ---
+   * `cat` es opcional: sin él solo cambia el ventilador y el servo mantiene su
+   * ángulo (así lo usa la interpolación del playback, que no interpola cat). */
+  _alVentilador(kt, cat) {
     if (typeof Ventilador === 'undefined') return;
-    try { Ventilador.seguir(kt); }
+    try { Ventilador.seguir(kt, cat); }
     catch (err) { console.warn('[vientovis] ventilador omitido:', err); }
   },
 
@@ -707,9 +709,11 @@ const App = {
     this._pintarVientoMapa(i);
     this._pintarTicker(i);
     /* el ventilador sopla lo que la página está mostrando: mismo punto activo
-     * que contador/reloj/viento, sin vía paralela que pueda desincronizarse */
+     * que contador/reloj/viento, sin vía paralela que pueda desincronizarse.
+     * La categoría va aquí (punto discreto) y no en _setInterp: el servo salta
+     * de categoría, nunca la interpola. */
     const p = this._estado && this._estado.puntos[i];
-    if (p) this._alVentilador(p.viento_kt);
+    if (p) this._alVentilador(p.viento_kt, p.cat_ss);
   },
 
   /* Fecha/hora UTC del punto activo en el overlay superior izquierdo del mapa
