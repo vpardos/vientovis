@@ -194,9 +194,12 @@ const Ventilador = {
     this._objetivo = 0;
     this._actual = 0;
     /* estado seguro ANTES de soltar: el ventilador no debe quedarse girando
-     * si se cierra la página o se desconecta el cable */
+     * si se cierra la página o se desconecta el cable, y el servo se suelta
+     * de inmediato (el sketch nuevo además lo suelta solo a los 500 ms; un
+     * sketch viejo ignora la línea 'D' sin romperse) */
     if (escritor) {
       try { await escritor.write(this._codificador.encode('F0\n')); } catch (err) { /* puerto ya ido */ }
+      try { await escritor.write(this._codificador.encode('D\n')); } catch (err) { /* noop */ }
       try { escritor.releaseLock(); } catch (err) { /* noop */ }
     }
     if (puerto) { try { await puerto.close(); } catch (err) { /* noop */ } }
