@@ -8,7 +8,7 @@
 %       → El feedback al otro grupo → Evaluación con usuarios (una subsección por ronda)
 %   §10 Rúbrica: Proceso iterativo 25 % · Rationale 25 % · Revisiones 15 %
 %       · Feedback al otro grupo 10 % · Prototipo final 15 % · Evaluación con usuarios 10 %
-%   §12 Checklist previo a la entrega (anexo al final)
+%   §12 Checklist previo a la entrega: no va en el documento (la plantilla §11 no lo incluye)
 %
 % Convenciones de este archivo:
 %   \pendiente{...}  → texto en rojo que AÚN FALTA completar. Antes de entregar,
@@ -124,7 +124,6 @@
 	% ==============================================================================
 	\begin{center}
 		{\scshape\Large Pontificia Universidad Católica de Chile}\\[0.2cm]
-		{\large Escuela de Ingeniería · Departamento de Ciencia de la Computación}\\[0.15cm]
 		{\large IIC2026 — Visualización de Información · Semestre 2026-2}\\[0.8cm]
 
 		\begin{tcolorbox}[colback=ink, colframe=ink, arc=6pt, halign=center, left=15pt, right=15pt, top=14pt, bottom=14pt]
@@ -153,7 +152,7 @@
 				% VIDEO: video demostrativo público (YouTube u otro) del prototipo final,
 				%        mostrando la interacción física y sonora COMPLETA. Reemplazar la línea siguiente:
 				% \item \textbf{Video demostrativo del prototipo final (V4):} \href{https://youtu.be/XXXXXXXXXXX}{https://youtu.be/XXXXXXXXXXX}
-				\item \textbf{Video demostrativo del prototipo final (V4):} \pendiente{link al video}
+				\item \textbf{Video demostrativo del prototipo final (V4):} \href{https://youtu.be/0FqH8F_qG6I}{https://youtu.be/0FqH8F\_qG6I}
 			\end{itemize}
 		\end{metabox}
 	\end{center}
@@ -173,11 +172,11 @@
 	\subsection{Procesamiento de los Datos}
 	% máx. 8 líneas. Si los datos se procesaron o ajustaron para la interacción tangible
 	% o la fisicalización, y cómo. Mencionar si se mantiene el dataset de la Entrega 1.
-	Se mantiene el mismo dataset de la Entrega 1, sin cambios; lo que se ajusta es cómo los datos llegan a la maqueta.
+	Se mantiene el dataset de la Entrega 1; solo se ajusta cómo llegan los datos a la maqueta.
 	\begin{itemize}
-		\item \textbf{Viento $\rightarrow$ ventilador:} la velocidad del viento del punto activo se traduce en potencia del ventilador con una curva anclada en los umbrales Saffir-Simpson. Parte en 28\,\% (bajo eso un ventilador de 12\,V no gira) y llega a 100\,\% solo en el pico de la serie (Irma, 155\,kt), para que Cat 4 y Cat 5 se distingan.
-		\item \textbf{Categoría $\rightarrow$ servo (mueve la casa):} las seis categorías se agrupan en cuatro ángulos (T.T./TD 30°, Cat 1--2 45°, Cat 3--4 60°, Cat 5 75°), enviados solo cuando la categoría cambia.
-		\item \textbf{Sonido (se mantiene de la Entrega 1):} a menor presión, un tono grave de fondo sube de altura. El volumen de un sonido de viento crece con la categoría y, desde Cat 4, cambia a una grabación más grave y amenazante. Al tocar tierra el viento se oye apagado. Las muertes suenan como pulsos y los daños como ráfagas, más numerosos mientras mayor sea la cifra.
+		\item \textbf{Viento $\rightarrow$ ventilador:} potencia según una curva anclada en los umbrales Saffir-Simpson. Parte en 28\,\% (bajo eso el ventilador de 12\,V no gira) y llega a 100\,\% solo con Irma (155\,kt), para separar Cat 4 de Cat 5.
+		\item \textbf{Categoría $\rightarrow$ servo (movía la casa; dañado en la V4):} cuatro ángulos para seis categorías (T.T./TD 30°, Cat 1--2 45°, Cat 3--4 60°, Cat 5 75°), enviados solo cuando la categoría cambia.
+		\item \textbf{Sonido (igual que en la Entrega 1):} presión $\rightarrow$ tono grave; categoría $\rightarrow$ volumen y timbre del viento; tocatierra $\rightarrow$ viento apagado; muertes y daños $\rightarrow$ pulsos y ráfagas.
 	\end{itemize}
 
 	\vspace{0.4cm}
@@ -232,7 +231,7 @@
 	% ==============================================================================
 	\begin{revisionbox}{R1 — Revisión con el Equipo Docente}{3 de noviembre de 2026}
 		\noindent\textbf{Fecha:} 3 de noviembre de 2026.\\
-		\textbf{Síntesis de lo discutido:} No llevamos la maqueta a la revisión, así que la presentamos de forma verbal. Mostramos la página de control del ventilador y explicamos la experiencia completa: el viento del huracán activo sale de un ventilador real que actúa sobre una maqueta. El equipo docente aprobó la idea y le gustó la propuesta.
+		\textbf{Síntesis de lo discutido:} No llevamos el ventilador ni el servo, que la página necesitaba para funcionar, así que presentamos la idea de forma verbal. Mostramos la página de control del ventilador y explicamos la experiencia completa: el viento del huracán activo sale de un ventilador real que actúa sobre una maqueta. El equipo docente aprobó la idea y le gustó la propuesta.
 
 		\vspace{0.15cm}
 		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
@@ -273,17 +272,18 @@
 		\vspace{0.15cm}
 		\noindent\textbf{Por qué cambió — el rationale:}
 		% máx. 12 líneas.
-		En la V1 el ventilador se controlaba a mano con controles deslizantes, así que la fuerza del viento dependía de quien lo manejaba y no del dato. En la V2 el ventilador sigue directamente el punto activo del recorrido. Así lo físico queda unido al dato y a la parte digital, que es lo que pide una experiencia físico-digital.
-		La potencia del ventilador no aumenta en proporción directa al viento: sigue los cortes de categoría de la escala Saffir-Simpson, por dos razones medidas. Un ventilador de 12\,V no gira con menos de 28\,\% de potencia, por eso la curva parte ahí y una tormenta débil igual mueve aire. Además, con la primera curva cinco de los diez huracanes llegaban al 100\,\% y Cat 4 y Cat 5 se sentían igual; ahora solo Irma (155\,kt) llega al máximo.
-		El viento varía de forma continua, pero la categoría es un valor discreto. Por eso la categoría se mostró con otro canal: el servo mueve la casa a cuatro posiciones fijas, y solo cuando la categoría cambia.
-		La casa de cartón se construyó para que el viento produjera un efecto visible y fácil de leer como impacto, en vez de soplar al aire. El servo se suelta solo después de moverse: un servo que mantiene su posición sigue gastando corriente, y con el Arduino conectado por USB eso hacía que se reiniciara en medio de la demo.
+		En la V1 el ventilador se controlaba a mano con deslizadores, así que la fuerza del viento dependía de quien lo manejaba y no del dato. En la V2 sigue el punto activo del recorrido, lo que une lo físico al dato y a la parte digital.
+		La potencia no crece en proporción directa al viento, sino según los cortes de la escala Saffir-Simpson: el ventilador de 12\,V no gira bajo 28\,\%, por eso la curva parte ahí y una tormenta débil igual mueve aire; y con la primera curva cinco de los diez huracanes llegaban al 100\,\% y Cat 4 y Cat 5 se sentían igual (ahora solo Irma llega al máximo).
+		Como la categoría es discreta, va por otro canal: el servo mueve la casa a cuatro posiciones fijas, solo cuando la categoría cambia. La casa se construyó para que el viento tuviera un efecto visible, leíble como impacto.
+		El servo se suelta tras moverse: sosteniendo su posición gasta corriente y, con el Arduino alimentado por USB, puede reiniciarlo en medio de la demo.
+
 		\vspace{0.15cm}
 		\noindent\textbf{Qué se descartó:}
 		% máx. 5 líneas.
 		\begin{itemize}
 			\item \textbf{El control manual con deslizadores de la V1:} la fuerza del viento dependía de quien lo manejaba y no del dato.
 			\item \textbf{La primera curva viento $\rightarrow$ ventilador:} llegaba al 100\,\% ya en Cat 5 (137\,kt), así que cinco de los diez huracanes quedaban en el máximo y Cat 4 y Cat 5 se sentían igual.
-			\item \textbf{Dejar el servo sosteniendo su posición:} consumía corriente todo el tiempo y el Arduino se reiniciaba en medio de la demo.
+			\item \textbf{Dejar el servo sosteniendo su posición:} consume corriente todo el tiempo y puede reiniciar el Arduino en medio de la demo.
 		\end{itemize}
 	\end{versionbox}
 
@@ -346,11 +346,11 @@
 	% ==============================================================================
 	\begin{revisionbox}{R3 — Revisión con el Equipo Docente}{17 de noviembre de 2026}
 		\noindent\textbf{Fecha:} 17 de noviembre de 2026.\\
-		\textbf{Síntesis de lo discutido:} \pendiente{síntesis}
+		\textbf{Síntesis de lo discutido:} Nos preguntaron qué habíamos rescatado de la revisión entre pares (R2) y de R1. Probaron el prototipo y les gustó, pero comentaron que con el servo funcionando estaría aún mejor: el servo funcionó en R2, pero en R3 no funcionó.
 
 		\vspace{0.15cm}
 		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
-		\pendiente{decisiones}
+		El servo estaba malo: había que comprar otro y no lo compramos, así que en la V4 la casa no se mueve con la categoría y la maqueta funciona solo con el ventilador.
 	\end{revisionbox}
 
 	\vspace{0.4cm}
@@ -360,19 +360,16 @@
 	%    Experiencia completa y operativa (física, digital y sonora) + balance de cierre.
 	%    Si hubo versiones intermedias (V2.5, etc.), van en su lugar cronológico.
 	% ==============================================================================
-	% FECHA V4: se entrega el jueves 26 de noviembre; actualizar si corresponde.
-	\begin{versionbox}{V4 — La Experiencia Final}{24 de noviembre de 2026 · Commits \texttt{fe0400b}, \texttt{58e55ca}}
+	\begin{versionbox}{V4 — La Experiencia Final}{26 de noviembre de 2026 · Commits \texttt{fe0400b}, \texttt{58e55ca}}
 		\noindent\textbf{Evidencia:}
-		\pendiente{fotos y video de V4}
-		% VIDEO: \href{https://youtu.be/XXXXXXXXXXX}{https://youtu.be/XXXXXXXXXXX}
+		Prototipo final con base, decoración y palmera (\textit{Figura~\ref{fig:v4-foto1}}). Video del prototipo final: \href{https://youtu.be/0FqH8F_qG6I}{https://youtu.be/0FqH8F\_qG6I}.
 
-		% FOTO: estado físico de V4 (prototipo final, con base y decoración). Aún no hay foto:
-		%       guardarla como figuras/v4_foto1.jpg y descomentar.
-		% \begin{center}
-		% 	\includegraphics[height=9cm]{v4_foto1.jpg}
-		% 	\captionof{figure}{V4: prototipo final con base y decoración.}
-		% 	\label{fig:v4-foto1}
-		% \end{center}
+		% FOTO: v4_foto1.png es la imagen enviada para V4.
+		\begin{center}
+			\includegraphics[width=0.85\textwidth]{v4_foto1.png}
+			\captionof{figure}{V4: la casa de cartón con su tejado de papel, la palmera y la base decorada, frente al ventilador.}
+			\label{fig:v4-foto1}
+		\end{center}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Qué cambió:}
@@ -400,8 +397,8 @@
 		\vspace{0.15cm}
 		\noindent\textbf{Balance de cierre:}
 		\begin{itemize}
-			\item \textbf{Qué mejoró desde V1:} En la V1 el ventilador se controlaba a mano y no había maqueta. En la V4 el viento sigue al dato: la potencia del ventilador está anclada en la escala Saffir-Simpson y separa Cat 4 de Cat 5, y la categoría mueve la casa con el servo. La maqueta creció en dos pasos. Primero se hizo la casa de cartón (V2) y se mejoró el tejado para que se notaran las diferencias de intensidad (V3); después se agregaron una palmera, una base y decoración (V4). En la parte digital, los botones más grandes y los pop-ups de ayuda responden a lo que observamos en la evaluación con usuarios.
-			\item \textbf{Qué deliberadamente no se cambió y por qué:} Mantuvimos el dataset de la Entrega 1 y la idea central: el viento del huracán sale de un ventilador real sobre una casa. El equipo docente aprobó la idea en R1 y el grupo de R2 la encontró intuitiva y pidió conservar el ventilador y la casa.
+			\item \textbf{Qué mejoró desde V1:} En la V1 el ventilador se controlaba a mano y no había maqueta. En la V4 el viento sigue al dato: la potencia del ventilador está anclada en la escala Saffir-Simpson y separa Cat 4 de Cat 5. El servo, que movía la casa según la categoría, funcionó en V2 y en R2, pero después se echó a perder y no se reemplazó. La maqueta creció en dos pasos. Primero se hizo la casa de cartón (V2) y se mejoró el tejado para que se notaran las diferencias de intensidad (V3); después se agregaron una palmera, una base y decoración (V4). En la parte digital, los botones más grandes y los pop-ups de ayuda responden a lo que observamos en la evaluación con usuarios.
+			\item \textbf{Qué deliberadamente no se cambió y por qué:} Mantuvimos el dataset de la Entrega 1 y la idea central: el viento del huracán sale de un ventilador real sobre una casa. El equipo docente aprobó la idea en R1 y el grupo de R2 la encontró intuitiva y pidió conservar el ventilador y la casa. Tampoco cambiamos el sonido: la página ya reproduce el sonido del viento, que el ventilador no es capaz de producir por sí solo, así que el ventilador aporta el aire y la página el sonido.
 		\end{itemize}
 	\end{versionbox}
 
@@ -516,7 +513,7 @@
 	\subsubsection{El Sonido, Pensado en Voz Alta}
 	\begin{itemize}
 		\item \textbf{Qué dato cree que representan los sonidos:} el gráfico de viento y presión, y la llegada al continente, que coincide con las muertes.
-		\item \textbf{¿Lo guía o lo confunde?} Lo mismo \pendiente{¿que le sirve de guía, como al pensador 1?}
+		\item \textbf{¿Lo guía o lo confunde?} «Lo mismo».
 	\end{itemize}
 
 	\subsubsection{Bitácora}
@@ -554,27 +551,5 @@
 	\subsubsection{Efecto en el Proceso}
 	% Qué transición de versión refleja lo aprendido, o por qué ninguna.
 	Se refleja en la transición de V3 a V4: los botones de reproducir y sonido se agrandaron y se agregaron pop-ups de ayuda al abrir la página.
-
-	% ==============================================================================
-	% ANEXO — CHECKLIST PREVIO A LA ENTREGA (§12)
-	%   Marcar cada ítem cambiando $\square$ por \checkmark solo cuando esté verificado.
-	% ==============================================================================
-	\vspace{0.4cm}
-	\section*{Anexo: Checklist de la Entrega}
-	\addcontentsline{toc}{section}{Anexo: Checklist de la Entrega}
-
-	\begin{metabox}
-		\begin{itemize}[leftmargin=1.6em]
-			\item[$\square$] \textbf{Fisicalización o interacción tangible} presente, en una combinación físico-digital real.
-			\item[$\square$] \textbf{La capa digital enriquece} la experiencia; no es decorativa.
-			\item[$\square$] \textbf{Sonificación} acorde al contexto físico, con parámetros efectivos (tono, ritmo, timbre) y no solo volumen.
-			\item[$\square$] \textbf{Materiales baratos y accesibles}; lo que superó 1000--2000 CLP fue conversado antes con el profesor.
-			\item[$\square$] \textbf{Ejemplos revisados}: los del curso y los de Protobject.
-			\item[$\square$] \textbf{Revisiones asistidas} con el prototipo y preguntas concretas.
-			\item[$\square$] \textbf{Feedback específico} y basado en principios entregado al otro grupo, con su sección en este documento.
-			\item[$\square$] \textbf{Evidencia por versión}: fotos, video con interacción y sonido, y commits.
-			\item[$\square$] \textbf{El video final} muestra la experiencia completa.
-		\end{itemize}
-	\end{metabox}
 
 \end{document}
