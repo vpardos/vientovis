@@ -489,10 +489,7 @@ const App = {
       btn.classList.add('oculto');
       if (extra) {
         extra.classList.remove('oculto');
-        if (btnMudo) {
-          btnMudo.textContent = this._mudo ? 'Quitar silencio' : 'Silenciar';
-          btnMudo.setAttribute('aria-pressed', String(this._mudo));
-        }
+        if (btnMudo) this._pintarMudo(btnMudo);
         if (vol) vol.value = String(this._volumen);
       }
     } else {
@@ -525,8 +522,7 @@ const App = {
       btnMudo.addEventListener('click', () => {
         this._mudo = !this._mudo;
         this._conAudio('setMudo', this._mudo);
-        btnMudo.textContent = this._mudo ? 'Quitar silencio' : 'Silenciar';
-        btnMudo.setAttribute('aria-pressed', String(this._mudo));
+        this._pintarMudo(btnMudo);
       });
     }
     if (vol) {
@@ -535,6 +531,15 @@ const App = {
         this._conAudio('setVolumen', this._volumen);
       });
     }
+  },
+
+  /* V4: el botón de silencio tiene el mismo tamaño que «Activar sonido».
+   * Con sonido muestra «Silenciar» (neutro); silenciado vuelve a ser
+   * «Activar sonido» con el aspecto llamativo original (.silenciado). */
+  _pintarMudo(btnMudo) {
+    btnMudo.textContent = this._mudo ? 'Activar sonido' : 'Silenciar';
+    btnMudo.setAttribute('aria-pressed', String(this._mudo));
+    btnMudo.classList.toggle('silenciado', this._mudo);
   },
 
   /* --- cablear el botón del ventilador (defensivo, igual que el audio) ---

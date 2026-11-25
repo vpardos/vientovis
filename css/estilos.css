@@ -1593,7 +1593,7 @@ input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2
   .hero { gap: 10px; padding-bottom: 14px; }
   .reproductor { padding-left: 12px; padding-right: 12px; }
   .btn-primario { min-width: 90px; }
-  .reproductor #btn-audio { font-size: 17px; padding: 12px 18px; }
+  .reproductor #btn-audio, .reproductor #btn-mudo { font-size: 17px; padding: 12px 18px; }
   .reproductor #btn-play { font-size: 18px; padding: 13px 20px; min-width: 150px; }
   .audio-grupo { padding-left: 8px; }
   .ticker-chip { padding: 0 9px; font-size: 10.5px; }
@@ -1613,6 +1613,41 @@ input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2
 .reproductor #btn-play::before { content: '\25B6'; }               /* ▶ */
 .reproductor #btn-play.reproduciendo::before { content: '\275A\275A'; letter-spacing: -0.15em; } /* ❚❚ */
 .reproductor #btn-audio::before { content: '\266A'; }              /* ♪ */
+
+/* Silenciar: mismo tamaño que «Activar sonido», aspecto neutro. Silenciado
+ * (.silenciado) vuelve a «Activar sonido» con el violeta, el ícono y el pulso
+ * del botón original (app.js: _pintarMudo). */
+.reproductor #btn-mudo {
+  font-size: 20px;
+  font-weight: 700;
+  padding: 14px 26px;
+  border-radius: 10px;
+}
+/* mismo ancho en ambos estados: el botón no salta al cambiar de texto */
+.reproductor #btn-audio,
+.reproductor #btn-mudo { min-width: 13em; }
+.reproductor #btn-mudo.silenciado {
+  background: #8d6fd1;
+  border-color: #8d6fd1;
+  color: #0b0e14;
+  box-shadow: 0 0 0 1px rgba(141, 111, 209, 0.35), 0 10px 28px rgba(125, 91, 199, 0.24);
+  animation: pulso-audio 2.6s ease-in-out infinite;
+}
+.reproductor #btn-mudo.silenciado:hover:not(:disabled) {
+  background: #9d83db;
+  border-color: #9d83db;
+  color: #0b0e14;
+}
+.reproductor #btn-mudo.silenciado::before {
+  content: '\266A';
+  display: inline-block;
+  margin-right: 0.5em;
+  font-size: 0.9em;
+  line-height: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reproductor #btn-mudo.silenciado { animation: none; }
+}
 
 /* ------------ V4: pop-ups de ayuda al abrir la página (js/ayuda.js) ------------ */
 
@@ -1671,4 +1706,8 @@ input[type='range'].volumen:hover::-moz-range-thumb { background: var(--acento-2
 
 @media (prefers-reduced-motion: reduce) {
   .ayuda-burbuja { animation: none; }
+}
+
+@media (max-width: 480px) {
+  .reproductor #btn-mudo { font-size: 17px; padding: 12px 18px; }
 }
