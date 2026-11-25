@@ -181,6 +181,13 @@ const App = {
 
     this._pintaSelector(id);
     await this._montarTormenta(id, document.getElementById('tor-raiz'), token);
+
+    /* V4: pop-ups de ayuda (huracanes, Reproducir, Activar sonido), una vez
+     * por carga de página y solo si esta ruta sigue vigente */
+    if (!this._ayudaMostrada && token === this._token && typeof Ayuda !== 'undefined') {
+      this._ayudaMostrada = true;
+      try { Ayuda.mostrar(); } catch (err) { console.warn('[vientovis] ayuda omitida:', err); }
+    }
   },
 
   /* Fichas del selector: ordenadas por MUERTES descendente (el impacto manda);
