@@ -177,6 +177,7 @@
 	\begin{itemize}
 		\item \textbf{Viento $\rightarrow$ ventilador:} la velocidad del viento del punto activo se traduce en potencia del ventilador con una curva anclada en los umbrales Saffir-Simpson. Parte en 28\,\% (bajo eso un ventilador de 12\,V no gira) y llega a 100\,\% solo en el pico de la serie (Irma, 155\,kt), para que Cat 4 y Cat 5 se distingan.
 		\item \textbf{Categoría $\rightarrow$ servo (mueve la casa):} las seis categorías se agrupan en cuatro ángulos (T.T./TD 30°, Cat 1--2 45°, Cat 3--4 60°, Cat 5 75°), enviados solo cuando la categoría cambia.
+		\item \textbf{Sonido (se mantiene de la Entrega 1):} a menor presión, un tono grave de fondo sube de altura. El volumen de un sonido de viento crece con la categoría y, desde Cat 4, cambia a una grabación más grave y amenazante. Al tocar tierra el viento se oye apagado. Las muertes suenan como pulsos y los daños como ráfagas, más numerosos mientras mayor sea la cifra.
 	\end{itemize}
 
 	\vspace{0.4cm}
@@ -205,19 +206,22 @@
 		% máx. 8 líneas. Lista concreta.
 		\begin{itemize}
 			\item Primera versión de una página HTML funcional que controla el ventilador físico.
+			\item Se agrega una capa física: un ventilador de 12\,V y un servo, controlados por un Arduino.
+			\item Se define qué se lleva a lo físico: el viento pasa a ser el ventilador y la categoría pasa al servo, que mueve la casa.
 		\end{itemize}
-		\pendiente{completar cambios de V1 (máx. 8 líneas)}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Por qué cambió — el rationale:}
 		% máx. 12 líneas. Lo que más pesa en la rúbrica (25 %). Anclado en principios del curso,
 		% discusiones de revisiones, feedback de usuarios, evidencia del dato o restricciones documentadas.
-		\pendiente{rationale de V1 (máx. 12 líneas)}
+		En la Entrega 1 la intensidad del huracán solo se leía en la pantalla, como cifras de viento y como el color de la categoría. Para pasar al mundo físico elegimos el viento porque es el único dato que se puede reproducir tal cual es: un ventilador real genera viento. Así el usuario no tiene que traducir un símbolo para entenderlo.
+		El efecto del viento sobre una maqueta muestra el impacto sobre las estructuras, que es el mensaje del proyecto. La categoría se reservó para un segundo canal, un servo que mueve la casa, para no cargar todo en la fuerza del viento.
+		Antes de conectar el ventilador a los datos, armamos una página local (\texttt{fan.html}) con controles deslizantes para el ventilador y el servo.
 
 		\vspace{0.15cm}
 		\noindent\textbf{Qué se descartó:}
 		% máx. 5 líneas. Alternativas probadas y abandonadas, y por qué.
-		\pendiente{descartes de V1 (máx. 5 líneas)}
+		Consideramos llevar al mundo físico las muertes o las pérdidas económicas. Las descartamos porque no tienen un equivalente físico directo: habría que traducirlas a un símbolo. El viento, en cambio, se reproduce tal cual es.
 	\end{versionbox}
 
 	\vspace{0.4cm}
@@ -228,11 +232,11 @@
 	% ==============================================================================
 	\begin{revisionbox}{R1 — Revisión con el Equipo Docente}{3 de noviembre de 2026}
 		\noindent\textbf{Fecha:} 3 de noviembre de 2026.\\
-		\textbf{Síntesis de lo discutido:} No se presentó con la maqueta completa, ya que se nos quedó; la revisión consistió en la presentación formal de la idea. \pendiente{quién revisó y qué se discutió}
+		\textbf{Síntesis de lo discutido:} No llevamos la maqueta a la revisión, así que la presentamos de forma verbal. Mostramos la página de control del ventilador y explicamos la experiencia completa: el viento del huracán activo sale de un ventilador real que actúa sobre una maqueta. El equipo docente aprobó la idea y le gustó la propuesta.
 
 		\vspace{0.15cm}
 		\noindent\textbf{Decisiones tomadas (adoptado / descartado y por qué):}
-		\pendiente{decisiones}
+		Seguimos con la idea tal como se presentó, porque fue aprobada y no hubo observaciones que pidieran cambiarla. La V2 se dedicó a llevar a cabo lo que en la V1 estaba solo planteado: el ventilador sincronizado con el dato y la casa de cartón.
 	\end{revisionbox}
 
 	\vspace{0.4cm}
@@ -242,6 +246,9 @@
 	%    Qué no funcionó en la forma física, la interacción tangible y el sonido.
 	% ==============================================================================
 	\begin{versionbox}{V2 — Primera Iteración de Diseño}{12 de noviembre de 2026 · Commits \texttt{85024f3}, \texttt{fc84d25}, \texttt{ecad690}, \texttt{0ae2df0}}
+		\noindent\textbf{Nota sobre las fechas:} los commits de esta versión se escribieron entre el 3 y el 5 de noviembre, pero no estaban probados con el hardware. Por eso no se presentaron en R1, y la V2 se dio por terminada el 12 de noviembre, después de probarla con el ventilador y la casa.
+
+		\vspace{0.15cm}
 		\noindent\textbf{Evidencia:}
 		Ventilador funcionando conectado al Arduino (\textit{Figura~\ref{fig:v2-foto1}}).
 		% VIDEO: Video de la versión: \href{https://youtu.be/XXXXXXXXXXX}{https://youtu.be/XXXXXXXXXXX}.
@@ -259,18 +266,25 @@
 		\begin{itemize}
 			\item El ventilador funciona sincronizado con la página del proyecto.
 			\item Se construye la casa de cartón que recibe el viento del ventilador (en V1 no existía).
+			\item La potencia del ventilador sigue una curva anclada en la escala Saffir-Simpson, que distingue Cat 4 de Cat 5.
+			\item Un servo mueve la casa a una de cuatro posiciones según la categoría del punto activo.
 		\end{itemize}
-		\pendiente{completar cambios de V2 (máx. 8 líneas)}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Por qué cambió — el rationale:}
 		% máx. 12 líneas.
-		\pendiente{rationale de V2 (máx. 12 líneas)}
-
+		En la V1 el ventilador se controlaba a mano con controles deslizantes, así que la fuerza del viento dependía de quien lo manejaba y no del dato. En la V2 el ventilador sigue directamente el punto activo del recorrido. Así lo físico queda unido al dato y a la parte digital, que es lo que pide una experiencia físico-digital.
+		La potencia del ventilador no aumenta en proporción directa al viento: sigue los cortes de categoría de la escala Saffir-Simpson, por dos razones medidas. Un ventilador de 12\,V no gira con menos de 28\,\% de potencia, por eso la curva parte ahí y una tormenta débil igual mueve aire. Además, con la primera curva cinco de los diez huracanes llegaban al 100\,\% y Cat 4 y Cat 5 se sentían igual; ahora solo Irma (155\,kt) llega al máximo.
+		El viento varía de forma continua, pero la categoría es un valor discreto. Por eso la categoría se mostró con otro canal: el servo mueve la casa a cuatro posiciones fijas, y solo cuando la categoría cambia.
+		La casa de cartón se construyó para que el viento produjera un efecto visible y fácil de leer como impacto, en vez de soplar al aire. El servo se suelta solo después de moverse: un servo que mantiene su posición sigue gastando corriente, y con el Arduino conectado por USB eso hacía que se reiniciara en medio de la demo.
 		\vspace{0.15cm}
 		\noindent\textbf{Qué se descartó:}
 		% máx. 5 líneas.
-		\pendiente{descartes de V2 (máx. 5 líneas)}
+		\begin{itemize}
+			\item \textbf{El control manual con deslizadores de la V1:} la fuerza del viento dependía de quien lo manejaba y no del dato.
+			\item \textbf{La primera curva viento $\rightarrow$ ventilador:} llegaba al 100\,\% ya en Cat 5 (137\,kt), así que cinco de los diez huracanes quedaban en el máximo y Cat 4 y Cat 5 se sentían igual.
+			\item \textbf{Dejar el servo sosteniendo su posición:} consumía corriente todo el tiempo y el Arduino se reiniciaba en medio de la demo.
+		\end{itemize}
 	\end{versionbox}
 
 	\vspace{0.4cm}
@@ -311,13 +325,13 @@
 		\begin{itemize}
 			\item Se mejora el mecanismo del techo de la maqueta para que su movimiento con el viento se note más.
 		\end{itemize}
-		\pendiente{completar cambios de V3 (máx. 8 líneas)}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Por qué cambió — el rationale:}
 		% máx. 12 líneas.
-		El cambio del techo responde al feedback de la revisión entre pares (R2): el grupo evaluador propuso que el tejado captara mejor el viento. Mejorar su mecanismo hace que el movimiento provocado por el ventilador se note más.
-		\pendiente{completar rationale de V3 si hay más (máx. 12 líneas)}
+		El cambio responde a la revisión entre pares (R2). Allí, el grupo evaluador entendió la intensidad y el impacto, pero de forma solo cualitativa: con el ventilador cuesta notar las diferencias de intensidad.
+		El tejado es la parte de la maqueta que mejor puede mostrar esas diferencias, porque su movimiento crece con la fuerza del viento. Mejoramos su mecanismo para que capte más aire y se levante más a medida que el ventilador acelera. Así la diferencia entre categorías se ve y no solo se siente en la piel.
+		Mantuvimos el ventilador y la casa, porque el mismo grupo los encontró intuitivos y pidió conservarlos.
 
 		\vspace{0.15cm}
 		\noindent\textbf{Qué se descartó:}
@@ -368,25 +382,26 @@
 			\item Los botones \textit{Reproducir} y \textit{Activar sonido} se agrandan, llevan ícono (reproducir/pausa y nota musical) y pulsan con más fuerza para llamar la atención. El botón de silencio tiene el mismo tamaño: muestra \textit{Silenciar} y, al silenciar, vuelve a \textit{Activar sonido}.
 			\item Al abrir la página aparecen pop-ups de ayuda que indican que se puede hacer clic en cada huracán y en los botones \textit{Reproducir} y \textit{Activar sonido}.
 		\end{itemize}
-		\pendiente{completar cambios de V4, si hay más (máx. 8 líneas)}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Por qué cambió — el rationale:}
 		% máx. 12 líneas.
 		La palmera responde al feedback de la revisión entre pares (R2): en lugar de las aletas de papel propuestas, que no alcanzamos a hacer por falta de tiempo, se agregó a la maqueta.
 		Los botones más grandes y los pop-ups de ayuda salen de la evaluación con usuarios: ambos pensadores evitaron el reproductor, uno dudó antes de tocarlo y la heurística que falló fue que la interacción del reproductor era difícil de descubrir. De esas sesiones salieron como cambios concretos «reproductor más grande y pop-ups» y especificar que se puede hacer clic en el menú.
-		\pendiente{completar rationale de V4 si hay más (máx. 12 líneas)}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Qué se descartó:}
 		% máx. 5 líneas.
-		\pendiente{descartes de V4 (máx. 5 líneas)}
+		\begin{itemize}
+			\item \textbf{La etiqueta «Quitar silencio»:} al silenciar, el botón ahora vuelve a decir \textit{Activar sonido}, con el mismo tamaño y aspecto. Así el usuario reconoce siempre el mismo botón para el sonido y no aparece un segundo texto que aprender.
+			\item \textbf{Ensanchar todo el reproductor, como propuso la ronda 1:} agrandamos solo los botones \textit{Reproducir} y \textit{Activar sonido} y agregamos pop-ups, porque el problema era descubrir la interacción y no el espacio que ocupaba el reproductor.
+		\end{itemize}
 
 		\vspace{0.15cm}
 		\noindent\textbf{Balance de cierre:}
 		\begin{itemize}
-			\item \textbf{Qué mejoró desde V1:} \pendiente{balance}
-			\item \textbf{Qué deliberadamente no se cambió y por qué:} \pendiente{balance}
+			\item \textbf{Qué mejoró desde V1:} En la V1 el ventilador se controlaba a mano y no había maqueta. En la V4 el viento sigue al dato: la potencia del ventilador está anclada en la escala Saffir-Simpson y separa Cat 4 de Cat 5, y la categoría mueve la casa con el servo. La maqueta creció en dos pasos. Primero se hizo la casa de cartón (V2) y se mejoró el tejado para que se notaran las diferencias de intensidad (V3); después se agregaron una palmera, una base y decoración (V4). En la parte digital, los botones más grandes y los pop-ups de ayuda responden a lo que observamos en la evaluación con usuarios.
+			\item \textbf{Qué deliberadamente no se cambió y por qué:} Mantuvimos el dataset de la Entrega 1 y la idea central: el viento del huracán sale de un ventilador real sobre una casa. El equipo docente aprobó la idea en R1 y el grupo de R2 la encontró intuitiva y pidió conservar el ventilador y la casa.
 		\end{itemize}
 	\end{versionbox}
 
@@ -415,7 +430,7 @@
 
 	\subsection{Lo que nos Llevamos para Nuestro Proyecto}
 	% máx. 5 líneas.
-	\pendiente{lo que nos llevamos (máx. 5 líneas)}
+	Evaluar al grupo 8 nos mostró que una interacción intuitiva para quien la diseñó puede no ser descubrible para otros. Por eso revisamos que en nuestra página se supiera qué se puede pulsar, lo que se tradujo en los pop-ups de ayuda de V4. También nos llevamos la importancia del contexto: así como les sugerimos mostrar el año de forma visible, la maqueta depende de la pantalla para saber qué huracán y qué categoría se están viendo.
 
 	\vspace{0.4cm}
 
